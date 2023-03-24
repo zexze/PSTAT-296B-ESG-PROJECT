@@ -1,0 +1,102 @@
+---
+title: "296B Presentation - Bond"
+author: "ZeXing Hu"
+date: "2023-03-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, message = FALSE}
+#rm(list = ls())
+library(lubridate)
+library(ggplot2)
+library(kableExtra)
+library(tidyverse)
+library(dplyr)
+library(readxl, lib.loc = "/Library/Frameworks/R.framework/Versions/4.2/Resources/library")
+```
+
+
+**SBBI - IT Bond (5YR)**
+```{r, message = FALSE}
+sbbi_it_bond <- read_excel("/Users/zexing/Desktop/296B Final/Historical Data/SBBI Data for Capital Markets (2022_12_31).xlsx", sheet = "it_bond") %>%
+  rename("obs_date" = 1, "sbbi_it_bond" = 2,
+         "ust_1m" = 3, "sbbi_it_bond_risk_premium" = 4, "cpi" = 5) %>%
+  mutate(obs_date = as.Date(obs_date,origin = "1899-12-30"))
+```
+
+```{r}
+summary(sbbi_it_bond$sbbi_it_bond)
+boxplot(sbbi_it_bond$sbbi_it_bond,horizontal = TRUE)
+sbbi_it_bond %>%
+  ggplot(aes(x=sbbi_it_bond))+
+  geom_histogram(aes(y=..density..),color = "grey")+
+  labs(x = "Distribution of Historical IT Govt Bond (Annual)")
+```
+
+**NAIC - IT Bond**
+```{r}
+naic_int_govt <- read.csv("/Users/zexing/Desktop/296B Final/NAIC/naic_int_govt_tr.csv")
+naic_int_govt <- naic_int_govt[,-1]
+```
+
+```{r}
+summary(unlist(naic_int_govt))
+boxplot(unlist(naic_int_govt),horizontal = TRUE)
+```
+
+
+**AIRG - 69 Years of Data 1954.1 - 2022.12**
+
+**AIRG IT Govt Bond TR (Annual)**
+```{r}
+airg_it_govt <- read.csv("/Users/zexing/Desktop/296B Final/AIRG/airg_it_govt_annual.csv",header = FALSE)
+holder <- data.frame(matrix(0, ncol=70, nrow = 1000))
+for (col in 1:70){
+  holder[,col] = airg_it_govt[,col+1]/airg_it_govt[,col]-1
+}
+airg_it_govt <- holder[,-70]
+```
+
+```{r}
+summary(unlist(airg_it_govt))
+boxplot(unlist(airg_it_govt),horizontal = TRUE)
+```
+
+
+
+**SBBI - Long-Term Government Bond (20Yr)**
+```{r, message = FALSE}
+sbbi_lt_bond <- read_excel("/Users/zexing/Desktop/296B Final/Historical Data/SBBI Data for Capital Markets (2022_12_31).xlsx", sheet = "lt_bond") %>%
+  rename("obs_date" = 1, "sbbi_lt_bond" = 2,
+         "ust_1m" = 3, "sbbi_lt_bond_risk_premium" = 4, "cpi" = 5) %>%
+  mutate(obs_date = as.Date(obs_date,origin = "1899-12-30"))
+```
+
+*Summary of the overall distribution*
+```{r}
+summary(sbbi_lt_bond$sbbi_lt_bond)
+boxplot(sbbi_lt_bond$sbbi_lt_bond,horizontal = TRUE)
+sbbi_lt_bond %>%
+  ggplot(aes(x=sbbi_lt_bond))+
+  geom_histogram(aes(y=..density..),color = "grey")+
+  labs(x = "Distribution of Historical LT Govt Bond (Annual)")
+```
+
+**NAIC - LT Bond**
+```{r}
+naic_lt_govt <- read.csv("/Users/zexing/Desktop/296B Final/NAIC/naic_lt_govt_tr.csv")
+naic_lt_govt <- naic_lt_govt[,-1]
+```
+
+```{r}
+summary(unlist(naic_lt_govt))
+boxplot(unlist(naic_lt_govt),horizontal = TRUE)
+```
+
+
+
+

@@ -1,0 +1,78 @@
+---
+title: "296B Presentation - UST - 1M"
+author: "ZeXing Hu"
+date: "2023-03-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, message = FALSE}
+#rm(list = ls())
+library(lubridate)
+library(ggplot2)
+library(kableExtra)
+library(tidyverse)
+library(dplyr)
+library(readxl, lib.loc = "/Library/Frameworks/R.framework/Versions/4.2/Resources/library")
+```
+
+
+**SBBI - UST - 1M**
+```{r, message = FALSE}
+sbbi_it_bond <- read_excel("/Users/zexing/Desktop/296B Final/Historical Data/SBBI Data for Capital Markets (2022_12_31).xlsx", sheet = "it_bond") %>%
+  rename("obs_date" = 1, "sbbi_it_bond" = 2,
+         "ust_1m" = 3, "sbbi_it_bond_risk_premium" = 4, "cpi" = 5) %>%
+  mutate(obs_date = as.Date(obs_date,origin = "1899-12-30"))
+```
+
+```{r}
+summary(sbbi_it_bond$ust_1m)
+sbbi_it_bond %>%
+  ggplot(aes(x=ust_1m))+
+  geom_histogram(aes(y=..density..),color = "grey")+
+  labs(x = "Distribution of Historical UST - 1M (Annual)")
+```
+
+
+**NAIC - UST - 1M**
+```{r}
+naic_ust_1m <-read.csv("/Users/zexing/Desktop/296B Final/NAIC/naic_ust_1m.csv")
+naic_ust_1m <- naic_ust_1m[,-1]
+summary(unlist(naic_ust_1m))
+```
+
+*Convert to Annual*
+```{r}
+naic_ust_1m_annual <- data.frame(matrix(1000, ncol=1, nrow = 1000))
+for (i in 1:1200){
+  naic_ust_1m_annual[,i+1] <- naic_ust_1m_annual[,i]*(1+naic_ust_1m[,i])
+}
+naic_ust_1m_annual <- naic_ust_1m_annual[,-1]
+holder <- data.frame(matrix(0, ncol=100, nrow = 1000))
+for (i in 1:100){
+  holder[,i] <- naic_ust_1m_annual[,12*i]/naic_ust_1m_annual[,(1+12*(i-1))]-1
+}
+naic_ust_1m_annual <- holder
+```
+
+
+```{r}
+naic_ust_1m_annual <-data.frame(x=unlist(naic_ust_1m_annual)) %>%
+  rename("naic_ust_1m_annual" = 1)
+summary(naic_ust_1m_annual$naic_ust_1m_annual)
+naic_ust_1m_annual %>%
+  ggplot(aes(x=naic_ust_1m_annual))+
+  geom_histogram(aes(y=..density..),color = "grey",bins = 30)+
+  labs(x = "Distribution of NAIC UST - 1M (Annual)")
+```
+
+
+
+
+
+
+
+

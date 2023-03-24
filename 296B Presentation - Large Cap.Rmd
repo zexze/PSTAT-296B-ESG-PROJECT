@@ -1,0 +1,73 @@
+---
+title: "296B Presentation - Large Cap"
+author: "ZeXing Hu"
+date: "2023-03-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r, message = FALSE}
+#rm(list = ls())
+library(lubridate)
+library(ggplot2)
+library(kableExtra)
+library(tidyverse)
+library(dplyr)
+library(readxl, lib.loc = "/Library/Frameworks/R.framework/Versions/4.2/Resources/library")
+```
+
+
+**SBBI - 1926.1.1 to 2022.12.01**
+```{r, message = FALSE}
+sbbi_large_cap <- read_excel("/Users/zexing/Desktop/296B Final/Historical Data/SBBI Data for Capital Markets (2022_12_31).xlsx", sheet = "large_cap") %>%
+  rename("obs_date" = 1, "sbbi_large_cap" = 2,
+         "ust_1m" = 3, "sbbi_equity_return" = 4, "cpi" = 5) %>%
+  mutate(obs_date = as.Date(obs_date,origin = "1899-12-30"))
+```
+
+```{r}
+summary(sbbi_large_cap$sbbi_large_cap)
+boxplot(sbbi_large_cap$sbbi_large_cap,horizontal=TRUE)
+```
+
+**NAIC - 100 Years of Data(Given)**
+```{r}
+naic_large_cap <- read.csv("/Users/zexing/Desktop/296B Final/NAIC/naic_large_cap_tr.csv")
+naic_large_cap <- naic_large_cap[,-1]
+```
+
+```{r}
+summary(unlist(naic_large_cap))
+boxplot(unlist(naic_large_cap),horizontal=TRUE)
+```
+
+
+**AIRG - 69 Years of Data 1954.1 - 2022.12**
+
+**AIRG Large Cap (Annual)**
+```{r}
+airg_large_cap <- read.csv("/Users/zexing/Desktop/296B Final/AIRG/airg_large_cap_annual.csv",header = FALSE)
+holder <- data.frame(matrix(0, ncol=70, nrow = 1000))
+for (col in 1:70){
+  holder[,col] = airg_large_cap[,col+1]/airg_large_cap[,col]-1
+}
+airg_large_cap <- holder[,-70]
+```
+
+```{r}
+summary(unlist(airg_large_cap))
+boxplot(unlist(airg_large_cap),horizontal=TRUE)
+```
+
+
+
+
+
+
+
+
+

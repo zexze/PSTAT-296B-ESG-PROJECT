@@ -1,0 +1,655 @@
+---
+title: "296B Presentation - PEW"
+author: "ZeXing Hu"
+output: html_document
+date: "2023-03-02"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, message = FALSE}
+#setwd("/Users/zexing/Desktop/296B Final/")
+#rm(list = ls())
+#install.packages("readxl")
+library(lubridate)
+library(ggplot2)
+library(kableExtra)
+library(tidyverse)
+library(dplyr)
+library(readxl, lib.loc = "/Library/Frameworks/R.framework/Versions/4.2/Resources/library")
+```
+
+
+#### PART I: Treasury Return Weighted Percentile (3 Month and 20 Year)
+
+**Treasury Return Weighted Percentile - SBBI - 20Year**
+```{r, message = FALSE}
+sbbi_ust_20yr <- read_excel("/Users/zexing/Desktop/296B Final/Historical Data/SBBI Data for Capital Markets (2022_12_31).xlsx", sheet = "ust_20yr") %>%
+  rename("obs_date" = 1, "sbbi_ust_20yr" = 2) %>%
+  mutate(obs_date = as.Date(obs_date,origin = "1899-12-30"))
+```
+
+*We have 97 years of historical data, so we set 48.5 years as our half life.*
+ $\frac{1}{2} = (1-\alpha)^{T_{now} - T_{past}}$
+ $T_{now} = 97Years = 1164 Month$
+ $T_{past} = 48.5Years = 582 Month$
+```{r}
+a <- 1-(1/2)^(1/582)
+w <- NULL
+for (i in 1:1164){
+  w[i] <- (1-a)^(1164-i)
+}
+nw <- NULL
+for (j in 1:1164){
+  nw[j] <- w[j]/sum(w)
+}
+```
+
+```{r}
+# Cbind the original data with the weight
+sbbi_ust_20yr <- sbbi_ust_20yr %>%
+  mutate (normalized_weight = nw)
+# Sort the data based on original data
+sbbi_ust_20yr<- sbbi_ust_20yr[order(sbbi_ust_20yr$sbbi_ust_20yr),]
+# Create a new column that calculate the running sum of the weights
+sbbi_ust_20yr<- sbbi_ust_20yr %>%
+  mutate(percentage = cumsum(normalized_weight))
+```
+
+```{r}
+# min
+per_min <- min(sbbi_ust_20yr$sbbi_ust_20yr)
+# 1%
+per_1 <- sbbi_ust_20yr$sbbi_ust_20yr[which(sbbi_ust_20yr$percentage >= 0.009 & sbbi_ust_20yr$percentage <= 0.01000001)] 
+# 5%
+per_5 <- sbbi_ust_20yr$sbbi_ust_20yr[which(sbbi_ust_20yr$percentage >= 0.049 & sbbi_ust_20yr$percentage <= 0.05000001)] 
+# 15%
+per_15 <- sbbi_ust_20yr$sbbi_ust_20yr[which(sbbi_ust_20yr$percentage >= 0.14999 & sbbi_ust_20yr$percentage <= 0.1501)] 
+# 30%
+per_30 <- sbbi_ust_20yr$sbbi_ust_20yr[which(sbbi_ust_20yr$percentage >= 0.2998 & sbbi_ust_20yr$percentage <= 0.3001)] 
+# 50%
+per_50 <- sbbi_ust_20yr$sbbi_ust_20yr[which(sbbi_ust_20yr$percentage >= 0.4988 & sbbi_ust_20yr$percentage <= 0.5001)] 
+# 70%
+per_70 <- sbbi_ust_20yr$sbbi_ust_20yr[which(sbbi_ust_20yr$percentage >= 0.6988 & sbbi_ust_20yr$percentage <= 0.7001)] 
+# 85%
+per_85 <- sbbi_ust_20yr$sbbi_ust_20yr[which(sbbi_ust_20yr$percentage >= 0.849 & sbbi_ust_20yr$percentage <= 0.8501)] 
+# 95%
+per_95 <- sbbi_ust_20yr$sbbi_ust_20yr[which(sbbi_ust_20yr$percentage >= 0.9499 & sbbi_ust_20yr$percentage <= 0.9501)] 
+# 99%
+per_99 <- sbbi_ust_20yr$sbbi_ust_20yr[which(sbbi_ust_20yr$percentage >= 0.989 & sbbi_ust_20yr$percentage <= 0.9901)] 
+# Max
+per_max <- max(sbbi_ust_20yr$sbbi_ust_20yr)
+```
+
+```{r}
+Percentile <- as.data.frame(c("Min", "1%", "5%", "15%", "30%", "50%",
+                "70%", "85%", "95%", "99%", "Max"), byrow = FALSE)
+sbbi_ust_20yr_pew <- as.data.frame(c(per_min,per_1,per_5,per_15,per_30,per_50,
+                                     per_70,per_85,per_95,per_99,per_max), byrow = FALSE)
+sbbi_ust_20yr_pew <-cbind(Percentile,sbbi_ust_20yr_pew) %>%
+  rename("Percentile" = 1, "sbbi_ust_20yr_pew" = 2)
+sbbi_ust_20yr_pew 
+```
+
+
+*SBBI Steady State - Nearest 10 Years*
+```{r}
+sbbi_ust_20yr<- sbbi_ust_20yr[order(sbbi_ust_20yr$obs_date),]
+length(sbbi_ust_20yr$obs_date)
+sbbi_ust_20yr_steady <- sbbi_ust_20yr[c(1045:1164),]
+sbbi_ust_20yr_steady$sbbi_ust_20yr
+
+sbbi_ust_20yr_steady%>%
+  ggplot(aes(x=sbbi_ust_20yr)) +
+  geom_histogram(aes(y=..density..),color = "grey") +
+  labs(x = "SBBI -Distribution of US Treasury Yield (20Yrs) (2013.01-2022.12)") +
+  xlim(0,0.1) + ylim(0,100)
+```
+
+
+
+
+
+**Treasury Return Weighted Percentile - Fred Data - 3m**
+```{r, message = FALSE}
+fred_ust_3m <- read_excel("/Users/zexing/Desktop/296B Final/Historical Data/DTB3.xls", sheet = "ust_3m") %>%
+  rename("obs_date" = 1, "fred_ust_3m" = 2) %>%
+  mutate(obs_date = as.Date(obs_date,origin = "1899-12-30"))
+summary(fred_ust_3m$fred_ust_3m)
+```
+*We have 69 years of historical data, but we will use the same half life (48.5years) as the 20 year calculation for consistency.*
+```{r}
+a <- 1-(1/2)^(1/582)
+w <- NULL
+for (i in 1:829){
+  w[i] <- (1-a)^(829-i)
+}
+nw <- NULL
+for (j in 1:829){
+  nw[j] <- w[j]/sum(w)
+}
+```
+
+```{r}
+# Cbind the original data with the weight
+fred_ust_3m <- fred_ust_3m %>%
+  mutate (normalized_weight = nw)
+# Sort the data based on original data
+fred_ust_3m<- fred_ust_3m[order(fred_ust_3m$fred_ust_3m),]
+# Create a new column that calculate the running sum of the weights
+fred_ust_3m<- fred_ust_3m %>%
+  mutate(percentage = cumsum(normalized_weight))
+```
+
+
+```{r}
+# min
+per_min <- min(fred_ust_3m$fred_ust_3m)
+# 1%
+per_1 <- fred_ust_3m$fred_ust_3m[which(fred_ust_3m$percentage >= 0.009 & fred_ust_3m$percentage <= 0.01000001)] 
+# 5%
+per_5 <- fred_ust_3m$fred_ust_3m[which(fred_ust_3m$percentage >= 0.048 & fred_ust_3m$percentage <= 0.0501)] 
+# 15%
+per_15 <- fred_ust_3m$fred_ust_3m[which(fred_ust_3m$percentage >= 0.14999 & fred_ust_3m$percentage <= 0.1501)] 
+# 30%
+per_30 <- fred_ust_3m$fred_ust_3m[which(fred_ust_3m$percentage >= 0.298 & fred_ust_3m$percentage <= 0.3001)] 
+# 50%
+per_50 <- fred_ust_3m$fred_ust_3m[which(fred_ust_3m$percentage >= 0.4998 & fred_ust_3m$percentage <= 0.5001)] 
+# 70%
+per_70 <- fred_ust_3m$fred_ust_3m[which(fred_ust_3m$percentage >= 0.6988 & fred_ust_3m$percentage <= 0.7001)] 
+# 85%
+per_85 <- fred_ust_3m$fred_ust_3m[which(fred_ust_3m$percentage >= 0.849 & fred_ust_3m$percentage <= 0.8501)] 
+# 95%
+per_95 <- fred_ust_3m$fred_ust_3m[which(fred_ust_3m$percentage >= 0.949 & fred_ust_3m$percentage <= 0.9501)] 
+# 99%
+per_99 <- fred_ust_3m$fred_ust_3m[which(fred_ust_3m$percentage >= 0.989 & fred_ust_3m$percentage <= 0.9901)] 
+# Max
+per_max <- max(fred_ust_3m$fred_ust_3m)
+```
+
+```{r}
+Percentile <- as.data.frame(c("Min", "1%", "5%", "15%", "30%", "50%",
+                "70%", "85%", "95%", "99%", "Max"), byrow = FALSE)
+fred_ust_3m_pew <- as.data.frame(c(per_min,per_1,per_5,per_15,per_30,per_50,
+                                     per_70,per_85,per_95,per_99,per_max), byrow = FALSE)
+fred_ust_3m_pew <-cbind(Percentile,fred_ust_3m_pew) %>%
+  rename("Percentile" = 1, "fred_ust_3m_pew" = 2)
+fred_ust_3m_pew 
+```
+
+
+
+```{r}
+fred_ust_3m<- fred_ust_3m[order(fred_ust_3m$obs_date),]
+length(fred_ust_3m$obs_date)
+fred_ust_3m_steady <- fred_ust_3m[c(709:828),]
+fred_ust_3m_steady$fred_ust_3m
+
+fred_ust_3m_steady%>%
+  ggplot(aes(x=fred_ust_3m)) +
+  geom_histogram(aes(y=..density..),color = "grey") +
+  labs(x = "FRED -Distribution of US Treasury Yield (3 Mo.) (2013.01-2022.12)")+
+  xlim(0,0.1) + ylim(0,100)
+```
+
+
+**Treasury Return Weighted Percentile - AIRG - 20Yr**
+```{r, message = FALSE}
+airg_ust_20yr <- read.csv("/Users/zexing/Desktop/296B Final/AIRG/UST_20y.csv",
+                          header = FALSE) 
+airg_ust_20yr <-  airg_ust_20yr[,-c(1,830:841)]
+```
+*Use AIRG data from 1954.01.01 to 2023.01.01. This is 69 years of data. Use the same half life (48.5 years) for consistency.*
+```{r}
+a <- 1-(1/2)^(1/582)
+# ncol(airg_ust_20yr) = 828
+w <- NULL
+for (i in 1:828){
+  w[i] <- (1-a)^(828-i)
+}
+nw <- NULL
+for (j in 1:828){
+  nw[j] <- w[j]/sum(w)
+}
+```
+
+```{r}
+wdf <- data.frame(matrix(w, ncol=length(w), byrow=FALSE))
+for (row in 1:1000) {
+  wdf[row,] <- wdf[1,]
+}
+nor_wdf <- data.frame(matrix(rep(0), ncol=828, byrow=FALSE))
+for (col in 1:828) {
+  nor_wdf[,col] <- wdf[1,col]/sum(wdf)
+}
+for (row in 1:1000) {
+  nor_wdf[row,] <- nor_wdf[1,]
+}
+#sum(nor_wdf) = 1
+```
+
+
+```{r}
+# Condense the orignial data matrix to a vector
+airg_ust_20yr <-data.frame(x=unlist(airg_ust_20yr)) %>%
+  rename("airg_ust_20yr" = 1)
+# Condense the normalized weight matrix to a vector
+nw <-data.frame(x=unlist(nor_wdf))
+```
+
+```{r}
+# Cbind the original data with the weight
+airg_ust_20yr <- airg_ust_20yr %>%
+  mutate (normalized_weight = nw[,1])
+# Sort the data based on original data
+airg_ust_20yr<- airg_ust_20yr[order(airg_ust_20yr$airg_ust_20yr),]
+# Create a new column that calculate the running sum of the weights
+airg_ust_20yr<- airg_ust_20yr %>%
+  mutate(percentage = cumsum(normalized_weight))
+```
+
+```{r}
+# min
+per_min <- min(airg_ust_20yr$airg_ust_20yr)
+# 1%
+per_1 <- airg_ust_20yr$airg_ust_20yr[which(airg_ust_20yr$percentage >= 0.009998 & airg_ust_20yr$percentage <= 0.0100)] 
+# 5%
+per_5 <- airg_ust_20yr$airg_ust_20yr[which(airg_ust_20yr$percentage >= 0.0499999 & airg_ust_20yr$percentage <= 0.0500)] 
+# 15%
+per_15 <- airg_ust_20yr$airg_ust_20yr[which(airg_ust_20yr$percentage >= 0.149999 & airg_ust_20yr$percentage <= 0.15000)] 
+# 30%
+per_30 <- airg_ust_20yr$airg_ust_20yr[which(airg_ust_20yr$percentage >= 0.299998 & airg_ust_20yr$percentage <= 0.3000)] 
+# 50%
+per_50 <- airg_ust_20yr$airg_ust_20yr[which(airg_ust_20yr$percentage >= 0.499998 & airg_ust_20yr$percentage <= 0.5000)] 
+# 70%
+per_70 <- airg_ust_20yr$airg_ust_20yr[which(airg_ust_20yr$percentage >= 0.6999998 & airg_ust_20yr$percentage <= 0.70000)] 
+# 85%
+per_85 <- airg_ust_20yr$airg_ust_20yr[which(airg_ust_20yr$percentage >= 0.849999 & airg_ust_20yr$percentage <= 0.850000)] 
+# 95%
+per_95 <- airg_ust_20yr$airg_ust_20yr[which(airg_ust_20yr$percentage >= 0.949999 & airg_ust_20yr$percentage <= 0.95000)] 
+# 99%
+per_99 <- airg_ust_20yr$airg_ust_20yr[which(airg_ust_20yr$percentage >= 0.9899978 & airg_ust_20yr$percentage <= 0.99000)] 
+# Max
+per_max <- max(airg_ust_20yr$airg_ust_20yr)
+```
+
+```{r}
+Percentile <- as.data.frame(c("Min", "1%", "5%", "15%", "30%", "50%",
+                "70%", "85%", "95%", "99%", "Max"), byrow = FALSE)
+airg_ust_20yr_pew <- as.data.frame(c(per_min,per_1,per_5,per_15,per_30,per_50,
+                                     per_70,per_85,per_95,per_99,per_max), byrow = FALSE)
+airg_ust_20yr_pew <-cbind(Percentile,airg_ust_20yr_pew) %>%
+  rename("Percentile" = 1, "airg_ust_20yr_pew" = 2)
+airg_ust_20yr_pew 
+```
+
+
+
+*Steady State - AIRG 20 Year*
+```{r}
+airg_ust_20yr <- read.csv("/Users/zexing/Desktop/296B Final/AIRG/UST_20y.csv",
+                          header = FALSE) 
+airg_ust_20yr <-  airg_ust_20yr[,-c(1,830:841)]
+length(airg_ust_20yr)
+airg_ust_20yr_steady <- airg_ust_20yr[,c(709:828)] #(2012.12-2022.12)
+length(airg_ust_20yr_steady)
+airg_ust_20yr_steady <- as_tibble(unlist(airg_ust_20yr_steady))
+airg_ust_20yr_steady%>%
+  ggplot(aes(x=value)) +
+  geom_histogram(aes(y=..density..),color = "grey") +
+  labs(x = "AIRG - Distribution of US Treasury Yield (20Yr) (2013.01-2022.12)")+
+  xlim(0,0.1) + ylim(0,100)
+```
+
+
+
+**Treasury Return Weighted Percentile - AIRG - 3m**
+```{r, message = FALSE}
+airg_ust_3m <- read.csv("/Users/zexing/Desktop/296B Final/AIRG/UST_3m.csv",
+                          header = FALSE) 
+airg_ust_3m <-  airg_ust_3m[,-c(1,830:841)]
+```
+*Use AIRG data from 1954.01.01 to 2023.01.01. This is 69 years of data. Use the same half life (48.5 years) for consistency.*
+```{r,eval = FALSE}
+#eval = FALSE because just reuse the same matrix from the 20 year
+a <- 1-(1/2)^(1/582)
+# ncol(airg_ust_3m) = 828
+w <- NULL
+for (i in 1:828){
+  w[i] <- (1-a)^(828-i)
+}
+```
+
+```{r, eval = FALSE}
+#eval = FALSE because just reuse the same matrix from the 20 year
+wdf <- data.frame(matrix(w, ncol=length(w), byrow=FALSE))
+for (row in 1:1000) {
+  wdf[row,] <- wdf[1,]
+}
+nor_wdf <- data.frame(matrix(rep(0), ncol=828, byrow=FALSE))
+for (col in 1:828) {
+  nor_wdf[,col] <- wdf[1,col]/sum(wdf)
+}
+for (row in 1:1000) {
+  nor_wdf[row,] <- nor_wdf[1,]
+}
+#sum(nor_wdf) = 1
+# Condense the normalized weight matrix to a vector
+nw <-data.frame(x=unlist(nor_wdf))
+```
+
+
+```{r}
+# Condense the orignial data matrix to a vector
+airg_ust_3m <-data.frame(x=unlist(airg_ust_3m)) %>%
+  rename("airg_ust_3m" = 1)
+```
+
+```{r}
+# Cbind the original data with the weight
+airg_ust_3m <- airg_ust_3m %>%
+  mutate (normalized_weight = nw[,1])
+# Sort the data based on original data
+airg_ust_3m<- airg_ust_3m[order(airg_ust_3m$airg_ust_3m),]
+# Create a new column that calculate the running sum of the weights
+airg_ust_3m<- airg_ust_3m %>%
+  mutate(percentage = cumsum(normalized_weight))
+```
+
+```{r}
+# min
+per_min <- min(airg_ust_3m$airg_ust_3m)
+# 1%
+per_1 <- airg_ust_3m$airg_ust_3m[which(airg_ust_3m$percentage >= 0.009998 & airg_ust_3m$percentage <= 0.0100)] 
+# 5%
+per_5 <- airg_ust_3m$airg_ust_3m[which(airg_ust_3m$percentage >= 0.049998 & airg_ust_3m$percentage <= 0.0500)] 
+# 15%
+per_15 <- airg_ust_3m$airg_ust_3m[which(airg_ust_3m$percentage >= 0.149998 & airg_ust_3m$percentage <= 0.15000)] 
+# 30%
+per_30 <- airg_ust_3m$airg_ust_3m[which(airg_ust_3m$percentage >= 0.299999 & airg_ust_3m$percentage <= 0.3000)] 
+# 50%
+per_50 <- airg_ust_3m$airg_ust_3m[which(airg_ust_3m$percentage >= 0.499999 & airg_ust_3m$percentage <= 0.5000)] 
+# 70%
+per_70 <- airg_ust_3m$airg_ust_3m[which(airg_ust_3m$percentage >= 0.699999 & airg_ust_3m$percentage <= 0.70000)] 
+# 85%
+per_85 <- airg_ust_3m$airg_ust_3m[which(airg_ust_3m$percentage >= 0.849999 & airg_ust_3m$percentage <= 0.850000)] 
+# 95%
+per_95 <- airg_ust_3m$airg_ust_3m[which(airg_ust_3m$percentage >= 0.949999 & airg_ust_3m$percentage <= 0.95000)] 
+# 99%
+per_99 <- airg_ust_3m$airg_ust_3m[which(airg_ust_3m$percentage >= 0.989999 & airg_ust_3m$percentage <= 0.99000)] 
+# Max
+per_max <- max(airg_ust_3m$airg_ust_3m)
+```
+
+```{r}
+Percentile <- as.data.frame(c("Min", "1%", "5%", "15%", "30%", "50%",
+                "70%", "85%", "95%", "99%", "Max"), byrow = FALSE)
+airg_ust_3m_pew <- as.data.frame(c(per_min,per_1,per_5,per_15,per_30,per_50,
+                                     per_70,per_85,per_95,per_99,per_max), byrow = FALSE)
+airg_ust_3m_pew <-cbind(Percentile,airg_ust_3m_pew) %>%
+  rename("Percentile" = 1, "airg_ust_3m_pew" = 2)
+airg_ust_3m_pew 
+```
+
+
+```{r}
+airg_ust_3m <- read.csv("/Users/zexing/Desktop/296B Final/AIRG/UST_3m.csv",
+                          header = FALSE) 
+airg_ust_3m <-  airg_ust_3m[,-c(1,830:841)]
+airg_ust_3m_steady <- airg_ust_3m[,c(709:828)] #(2012.12-2022.12)
+length(airg_ust_3m_steady)
+airg_ust_3m_steady <- as_tibble(unlist(airg_ust_3m_steady))
+airg_ust_3m_steady%>%
+  ggplot(aes(x=value)) +
+  geom_histogram(aes(y=..density..),color = "grey") +
+  labs(x = "AIRG - Distribution of US Treasury Yield (3 Mo.) (2013.01-2022.12)")+
+  xlim(0,0.1) + ylim(0,100)
+```
+
+
+
+
+**Treasury Return Weighted Percentile - NAIC - 3m**
+```{r, message = FALSE}
+naic_ust_3m <- read.csv("/Users/zexing/Desktop/296B Final/NAIC/naic_ust_3m.csv") 
+naic_ust_3m <- naic_ust_3m[,-1]
+```
+
+*NAIC data is given. This contains 100 years of data. Use the same half life (48.5 years) for consistency.*
+```{r}
+a <- 1-(1/2)^(1/582)
+# ncol(naic_ust_3m) = 1200
+w <- NULL
+for (i in 1:ncol(naic_ust_3m)){
+  w[i] <- (1-a)^(828-i)
+}
+```
+
+```{r}
+wdf <- data.frame(matrix(w, ncol=length(w), byrow=FALSE))
+for (row in 1:1000) {
+  wdf[row,] <- wdf[1,]
+}
+nor_wdf <- data.frame(matrix(rep(0), ncol=ncol(wdf), byrow=FALSE))
+for (col in 1:ncol(wdf)) {
+  nor_wdf[,col] <- wdf[1,col]/sum(wdf)
+}
+for (row in 1:1000) {
+  nor_wdf[row,] <- nor_wdf[1,]
+}
+#sum(nor_wdf) = 1
+# Condense the normalized weight matrix to a vector
+nw <-data.frame(x=unlist(nor_wdf))
+```
+
+
+```{r}
+# Condense the orignial data matrix to a vector
+naic_ust_3m <-data.frame(x=unlist(naic_ust_3m)) %>%
+  rename("naic_ust_3m" = 1)
+```
+
+```{r}
+# Cbind the original data with the weight
+naic_ust_3m <- naic_ust_3m %>%
+  mutate (normalized_weight = nw[,1])
+# Sort the data based on original data
+naic_ust_3m<- naic_ust_3m[order(naic_ust_3m$naic_ust_3m),]
+# Create a new column that calculate the running sum of the weights
+naic_ust_3m<- naic_ust_3m %>%
+  mutate(percentage = cumsum(normalized_weight))
+```
+
+```{r}
+# min
+per_min <- min(naic_ust_3m$naic_ust_3m)
+# 1%
+per_1 <- naic_ust_3m$naic_ust_3m[which(naic_ust_3m$percentage >= 0.009999 & naic_ust_3m$percentage <= 0.0100)] 
+# 5%
+per_5 <- naic_ust_3m$naic_ust_3m[which(naic_ust_3m$percentage >= 0.049999 & naic_ust_3m$percentage <= 0.0500)] 
+# 15%
+per_15 <- naic_ust_3m$naic_ust_3m[which(naic_ust_3m$percentage >= 0.149999 & naic_ust_3m$percentage <= 0.15000)] 
+# 30%
+per_30 <- naic_ust_3m$naic_ust_3m[which(naic_ust_3m$percentage >= 0.299999 & naic_ust_3m$percentage <= 0.3000)] 
+# 50%
+per_50 <- naic_ust_3m$naic_ust_3m[which(naic_ust_3m$percentage >= 0.499999 & naic_ust_3m$percentage <= 0.5000)] 
+# 70%
+per_70 <- naic_ust_3m$naic_ust_3m[which(naic_ust_3m$percentage >= 0.699999 & naic_ust_3m$percentage <= 0.70000)] 
+# 85%
+per_85 <- naic_ust_3m$naic_ust_3m[which(naic_ust_3m$percentage >= 0.849999 & naic_ust_3m$percentage <= 0.850000)] 
+# 95%
+per_95 <- naic_ust_3m$naic_ust_3m[which(naic_ust_3m$percentage >= 0.949999 & naic_ust_3m$percentage <= 0.95000)] 
+# 99%
+per_99 <- naic_ust_3m$naic_ust_3m[which(naic_ust_3m$percentage >= 0.989998 & naic_ust_3m$percentage <= 0.99000)] 
+# Max
+per_max <- max(naic_ust_3m$naic_ust_3m)
+```
+
+```{r}
+Percentile <- as.data.frame(c("Min", "1%", "5%", "15%", "30%", "50%",
+                "70%", "85%", "95%", "99%", "Max"), byrow = FALSE)
+naic_ust_3m_pew <- as.data.frame(c(per_min,per_1,per_5,per_15,per_30,per_50,
+                                     per_70,per_85,per_95,per_99,per_max), byrow = FALSE)
+naic_ust_3m_pew <-cbind(Percentile,naic_ust_3m_pew) %>%
+  rename("Percentile" = 1, "naic_ust_3m_pew" = 2)
+naic_ust_3m_pew 
+```
+
+
+*Steady State - NAIC 3Mo*
+```{r}
+#rm(list = ls())
+naic_ust_3m <- read.csv("/Users/zexing/Desktop/296B Final/NAIC/naic_ust_3m.csv") 
+naic_ust_3m <- naic_ust_3m[,-1]
+length(naic_ust_3m)
+naic_ust_3m_steady <- naic_ust_3m[,c(1081:1200)] 
+length(naic_ust_3m_steady)
+naic_ust_3m_steady <- as_tibble(unlist(naic_ust_3m_steady))
+naic_ust_3m_steady%>%
+  ggplot(aes(x=value)) +
+  geom_histogram(aes(y=..density..),color = "grey") +
+  labs(x = "NAIC - Distribution of US Treasury Yield (3 Mo.) (Recent 10 Yrs)")+
+  xlim(0,0.1) + ylim(0,100)
+```
+
+
+**Treasury Return Weighted Percentile - NAIC - 20yr**
+```{r, message = FALSE}
+naic_ust_20yr <- read.csv("/Users/zexing/Desktop/296B Final/NAIC/naic_ust_20yr.csv") 
+naic_ust_20yr <- naic_ust_20yr[,-1]
+```
+
+
+
+*Steady State - NAIC 20Yr*
+```{r}
+#rm(list = ls())
+naic_ust_20yr <- read.csv("/Users/zexing/Desktop/296B Final/NAIC/naic_ust_20yr.csv") 
+naic_ust_20yr <- naic_ust_20yr[,-1]
+length(naic_ust_20yr)
+naic_ust_20yr_steady <- naic_ust_20yr[,c(1081:1200)] 
+length(naic_ust_20yr_steady)
+naic_ust_20yr_steady <- as_tibble(unlist(naic_ust_20yr_steady))
+naic_ust_20yr_steady%>%
+  ggplot(aes(x=value)) +
+  geom_histogram(aes(y=..density..),color = "grey") +
+  labs(x = "NAIC - Distribution of US Treasury Yield (20 Yr.) (Recent 10 Yrs)")+
+  xlim(0,0.1) + ylim(0,100)
+```
+
+
+
+
+
+*NAIC data is given. This contains 100 years of data. Use the same half life (48.5 years) for consistency.*
+```{r, eval = FALSE}
+# eval = FALSE because will reuse the matrix from 3mo
+a <- 1-(1/2)^(1/582)
+# ncol(naic_ust_20yr) = 1200
+w <- NULL
+for (i in 1:ncol(naic_ust_20yr)){
+  w[i] <- (1-a)^(828-i)
+}
+```
+
+```{r, eval = FALSE}
+# eval = FALSE because will reuse the matrix from 3mo
+wdf <- data.frame(matrix(w, ncol=length(w), byrow=FALSE))
+for (row in 1:1000) {
+  wdf[row,] <- wdf[1,]
+}
+nor_wdf <- data.frame(matrix(rep(0), ncol=ncol(wdf), byrow=FALSE))
+for (col in 1:ncol(wdf)) {
+  nor_wdf[,col] <- wdf[1,col]/sum(wdf)
+}
+for (row in 1:1000) {
+  nor_wdf[row,] <- nor_wdf[1,]
+}
+#sum(nor_wdf) = 1
+# Condense the normalized weight matrix to a vector
+nw <-data.frame(x=unlist(nor_wdf))
+```
+
+```{r}
+# Condense the orignial data matrix to a vector
+naic_ust_20yr <-data.frame(x=unlist(naic_ust_20yr)) %>%
+  rename("naic_ust_20yr" = 1)
+```
+
+```{r}
+# Cbind the original data with the weight
+naic_ust_20yr <- naic_ust_20yr %>%
+  mutate (normalized_weight = nw[,1])
+# Sort the data based on original data
+naic_ust_20yr<- naic_ust_20yr[order(naic_ust_20yr$naic_ust_20yr),]
+# Create a new column that calculate the running sum of the weights
+naic_ust_20yr<- naic_ust_20yr %>%
+  mutate(percentage = cumsum(normalized_weight))
+```
+
+```{r}
+# min
+per_min <- min(naic_ust_20yr$naic_ust_20yr)
+# 1%
+per_1 <- naic_ust_20yr$naic_ust_20yr[which(naic_ust_20yr$percentage >= 0.0099999 & naic_ust_20yr$percentage <= 0.0100)] 
+# 5%
+per_5 <- naic_ust_20yr$naic_ust_20yr[which(naic_ust_20yr$percentage >= 0.049999 & naic_ust_20yr$percentage <= 0.0500)] 
+# 15%
+per_15 <- naic_ust_20yr$naic_ust_20yr[which(naic_ust_20yr$percentage >= 0.149999 & naic_ust_20yr$percentage <= 0.15000)] 
+# 30%
+per_30 <- naic_ust_20yr$naic_ust_20yr[which(naic_ust_20yr$percentage >= 0.299999 & naic_ust_20yr$percentage <= 0.3000)] 
+# 50%
+per_50 <- naic_ust_20yr$naic_ust_20yr[which(naic_ust_20yr$percentage >= 0.499999 & naic_ust_20yr$percentage <= 0.5000)] 
+# 70%
+per_70 <- naic_ust_20yr$naic_ust_20yr[which(naic_ust_20yr$percentage >= 0.699999 & naic_ust_20yr$percentage <= 0.70000)] 
+# 85%
+per_85 <- naic_ust_20yr$naic_ust_20yr[which(naic_ust_20yr$percentage >= 0.849999 & naic_ust_20yr$percentage <= 0.850000)] 
+# 95%
+per_95 <- naic_ust_20yr$naic_ust_20yr[which(naic_ust_20yr$percentage >= 0.9499998 & naic_ust_20yr$percentage <= 0.95000)] 
+# 99%
+per_99 <- naic_ust_20yr$naic_ust_20yr[which(naic_ust_20yr$percentage >= 0.9899994 & naic_ust_20yr$percentage <= 0.99000)] 
+# Max
+per_max <- max(naic_ust_20yr$naic_ust_20yr)
+```
+
+```{r}
+Percentile <- as.data.frame(c("Min", "1%", "5%", "15%", "30%", "50%",
+                "70%", "85%", "95%", "99%", "Max"), byrow = FALSE)
+naic_ust_20yr_pew <- as.data.frame(c(per_min,per_1,per_5,per_15,per_30,per_50,
+                                     per_70,per_85,per_95,per_99,per_max), byrow = FALSE)
+naic_ust_20yr_pew <-cbind(Percentile,naic_ust_20yr_pew) %>%
+  rename("Percentile" = 1, "naic_ust_20yr_pew" = 2)
+naic_ust_20yr_pew 
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

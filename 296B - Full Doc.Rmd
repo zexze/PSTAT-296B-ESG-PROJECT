@@ -1,0 +1,1373 @@
+---
+title: "296B - Full Doc"
+author: "ZeXing Hu"
+date: "2023-03-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, message = FALSE}
+#setwd("/Users/zexing/Desktop/296B Final/")
+#rm(list = ls())
+#install.packages("readxl")
+library(lubridate)
+library(ggplot2)
+library(kableExtra)
+library(tidyverse)
+library(dplyr)
+library(readxl, lib.loc = "/Library/Frameworks/R.framework/Versions/4.2/Resources/library")
+```
+
+#### PART 0: NAIC Cleaning
+
+**Load the original data and take out unnecessary info**
+```{r,eval = FALSE}
+naic <- read.csv("/Users/zexing/Desktop/model comparison/NAIC/1000_Path_Subset_1a_Conning_GFF_Baseline_Equity_123121.csv", header = TRUE)
+naic <- naic[,-c(3:35)] #get rid of spot rates
+naic <- naic[,-c(5:24)] #Only keep 1mo,3mo,20year
+naic <- naic[,-c(6:15)]
+naic <- naic[,-c(24:39)]
+naic <- naic[,-c(17:21)]
+naic <- naic[,-c(8:11)]
+naic <- naic[,-c(12)]
+write.csv(naic, file = "naic_cleaning.csv")
+```
+
+**Further clean the data to make it more concise**
+```{r,eval = FALSE}
+naic_c <- read.csv("/Users/zexing/Desktop/296B Final/RAW DATA/naic_cleaning.csv",header = TRUE)
+naic_c <- naic_c %>%
+  mutate(int_govt_tr = Int.Govt.Bonds.Price + Int.Govt.Bonds.Income) %>%
+  mutate(short_govt_tr = Short.Govt.Bonds.Price + Short.Govt.Bonds.Income) %>%
+  mutate(lt_govt_tr = Long.Govt.Bonds.Price + Long.Govt.Bonds.Income) %>%
+  mutate(large_cap_tr = Large.Cap.Price + Large.Cap.Income)
+naic_c <- naic_c[,-c(7:14)]
+naic_c <- naic_c %>%
+  rename("ust_1m_yield" = 4,
+         "ust_3m_yield" = 5,
+         "ust_20yr_yield" = 6)
+write.csv(naic_c, file = "naic_final.csv")
+```
+
+**Load our final data**
+```{r,eval = FALSE}
+naic <- read.csv("/Users/zexing/Desktop/model comparison/NAIC/naic_final.csv",header = TRUE)
+naic <- naic[,-c(1:2)]
+```
+
+ **Create a list that store all the values correspondent to I_th time**
+```{r,eval = FALSE}
+time <- c(1:1200)
+path <- c(1:1000)
+
+# Each object contains 1000 values
+mylist <- list()
+for (i in time) {
+  mylist[[i]] <- which(naic$TIME == i)
+}
+```
+
+**Get UST-1m NAIC Simulated Data**
+```{r,eval = FALSE}
+df <- data.frame(matrix(ncol = 1200, nrow = 1000))
+for (col in time) {
+  for (row in path) {
+    df[row,col] <- naic$ust_1m_yield[mylist[[col]][[row]]]
+  }
+}
+write.csv(df, file = "naic_ust_1m.csv")
+```
+
+```{r,eval = FALSE}
+# Check we do this correctly
+which(naic$TIME == 4)
+naic$ust_1m_yield[10814] #10th simulation, time 4
+df[10,4] #10th simulation, time 4
+# Number match! Did this correctly!
+```
+
+**Get UST-3m NAIC Simulated Data**
+```{r,eval = FALSE}
+df1 <- data.frame(matrix(ncol = 1200, nrow = 1000))
+for (col in time) {
+  for (row in path) {
+    df1[row,col] <- naic$ust_3m_yield[mylist[[col]][[row]]]
+  }
+}
+write.csv(df1, file = "naic_ust_3m.csv")
+```
+
+```{r,eval = FALSE}
+# Check we do this correctly
+which(naic$TIME == 4)
+naic$ust_3m_yield[10814] #10th simulation, time 4
+df1[10,4] #10th simulation, time 4
+# Number match! Did this correctly!
+```
+
+**Get UST-20Yr NAIC Simulated Data**
+```{r,eval = FALSE}
+df2 <- data.frame(matrix(ncol = 1200, nrow = 1000))
+for (col in time) {
+  for (row in path) {
+    df2[row,col] <- naic$ust_20yr_yield[mylist[[col]][[row]]]
+  }
+}
+write.csv(df2, file = "naic_ust_20yr.csv")
+```
+
+```{r,eval = FALSE}
+# Check we do this correctly
+which(naic$TIME == 4)
+naic$ust_20yr_yield[10814] #10th simulation, time 4
+df2[10,4] #10th simulation, time 4
+# Number match! Did this correctly!
+```
+
+**Get Intermediate Govt Bond TR NAIC Simulated Data**
+```{r,eval = FALSE}
+df3 <- data.frame(matrix(ncol = 1200, nrow = 1000))
+for (col in time) {
+  for (row in path) {
+    df3[row,col] <- naic$int_govt_tr[mylist[[col]][[row]]]
+  }
+}
+write.csv(df3, file = "naic_int_govt_tr.csv")
+```
+
+```{r,eval = FALSE}
+# Check we do this correctly
+which(naic$TIME == 4)
+naic$int_govt_tr[10814] #10th simulation, time 4
+df3[10,4] #10th simulation, time 4
+# Number match! Did this correctly!
+```
+
+**Get Short Term Govt Bond TR NAIC Simulated Data**
+```{r,eval = FALSE}
+df4 <- data.frame(matrix(ncol = 1200, nrow = 1000))
+for (col in time) {
+  for (row in path) {
+    df4[row,col] <- naic$short_govt_tr[mylist[[col]][[row]]]
+  }
+}
+write.csv(df4, file = "naic_short_govt_tr.csv")
+```
+
+```{r,eval = FALSE}
+# Check we do this correctly
+which(naic$TIME == 4)
+naic$short_govt_tr[10814] #10th simulation, time 4
+df4[10,4] #10th simulation, time 4
+# Number match! Did this correctly!
+```
+
+**Get Long Term Govt Bond TR NAIC Simulated Data**
+```{r,eval = FALSE}
+df5 <- data.frame(matrix(ncol = 1200, nrow = 1000))
+for (col in time) {
+  for (row in path) {
+    df5[row,col] <- naic$lt_govt_tr[mylist[[col]][[row]]]
+  }
+}
+write.csv(df5, file = "naic_lt_govt_tr.csv")
+```
+
+```{r,eval = FALSE}
+# Check we do this correctly
+which(naic$TIME == 4)
+naic$lt_govt_tr[10814] #10th simulation, time 4
+df5[10,4] #10th simulation, time 4
+# Number match! Did this correctly!
+```
+
+**Get Large Cap TR NAIC Simulated Data**
+```{r,eval = FALSE}
+df6 <- data.frame(matrix(ncol = 1200, nrow = 1000))
+for (col in time) {
+  for (row in path) {
+    df6[row,col] <- naic$large_cap_tr[mylist[[col]][[row]]]
+  }
+}
+write.csv(df6, file = "naic_large_cap_tr.csv")
+```
+
+```{r,eval = FALSE}
+# Check we do this correctly
+which(naic$TIME == 4)
+naic$large_cap_tr[10814] #10th simulation, time 4
+df6[10,4] #10th simulation, time 4
+# Number match! Did this correctly!
+```
+
+
+#### PART I: Treasury Return Weighted Percentile (3 Month and 20 Year)
+
+**Treasury Return Weighted Percentile - SBBI - 20Year**
+```{r, message = FALSE}
+sbbi_ust_20yr <- read_excel("/Users/zexing/Desktop/296B Final/Historical Data/SBBI Data for Capital Markets (2022_12_31).xlsx", sheet = "ust_20yr") %>%
+  rename("obs_date" = 1, "sbbi_ust_20yr" = 2) %>%
+  mutate(obs_date = as.Date(obs_date,origin = "1899-12-30"))
+```
+
+*We have 97 years of historical data, so we set 48.5 years as our half life.*
+ $\frac{1}{2} = (1-\alpha)^{T_{now} - T_{past}}$
+ $T_{now} = 97Years = 1164 Month$
+ $T_{past} = 48.5Years = 582 Month$
+```{r}
+a <- 1-(1/2)^(1/582)
+w <- NULL
+for (i in 1:1164){
+  w[i] <- (1-a)^(1164-i)
+}
+nw <- NULL
+for (j in 1:1164){
+  nw[j] <- w[j]/sum(w)
+}
+```
+
+```{r}
+# Cbind the original data with the weight
+sbbi_ust_20yr <- sbbi_ust_20yr %>%
+  mutate (normalized_weight = nw)
+# Sort the data based on original data
+sbbi_ust_20yr<- sbbi_ust_20yr[order(sbbi_ust_20yr$sbbi_ust_20yr),]
+# Create a new column that calculate the running sum of the weights
+sbbi_ust_20yr<- sbbi_ust_20yr %>%
+  mutate(percentage = cumsum(normalized_weight))
+```
+
+```{r}
+# min
+per_min <- min(sbbi_ust_20yr$sbbi_ust_20yr)
+# 1%
+per_1 <- sbbi_ust_20yr$sbbi_ust_20yr[which(sbbi_ust_20yr$percentage >= 0.009 & sbbi_ust_20yr$percentage <= 0.01000001)] 
+# 5%
+per_5 <- sbbi_ust_20yr$sbbi_ust_20yr[which(sbbi_ust_20yr$percentage >= 0.049 & sbbi_ust_20yr$percentage <= 0.05000001)] 
+# 15%
+per_15 <- sbbi_ust_20yr$sbbi_ust_20yr[which(sbbi_ust_20yr$percentage >= 0.14999 & sbbi_ust_20yr$percentage <= 0.1501)] 
+# 30%
+per_30 <- sbbi_ust_20yr$sbbi_ust_20yr[which(sbbi_ust_20yr$percentage >= 0.2998 & sbbi_ust_20yr$percentage <= 0.3001)] 
+# 50%
+per_50 <- sbbi_ust_20yr$sbbi_ust_20yr[which(sbbi_ust_20yr$percentage >= 0.4988 & sbbi_ust_20yr$percentage <= 0.5001)] 
+# 70%
+per_70 <- sbbi_ust_20yr$sbbi_ust_20yr[which(sbbi_ust_20yr$percentage >= 0.6988 & sbbi_ust_20yr$percentage <= 0.7001)] 
+# 85%
+per_85 <- sbbi_ust_20yr$sbbi_ust_20yr[which(sbbi_ust_20yr$percentage >= 0.849 & sbbi_ust_20yr$percentage <= 0.8501)] 
+# 95%
+per_95 <- sbbi_ust_20yr$sbbi_ust_20yr[which(sbbi_ust_20yr$percentage >= 0.9499 & sbbi_ust_20yr$percentage <= 0.9501)] 
+# 99%
+per_99 <- sbbi_ust_20yr$sbbi_ust_20yr[which(sbbi_ust_20yr$percentage >= 0.989 & sbbi_ust_20yr$percentage <= 0.9901)] 
+# Max
+per_max <- max(sbbi_ust_20yr$sbbi_ust_20yr)
+```
+
+```{r}
+Percentile <- as.data.frame(c("Min", "1%", "5%", "15%", "30%", "50%",
+                "70%", "85%", "95%", "99%", "Max"), byrow = FALSE)
+sbbi_ust_20yr_pew <- as.data.frame(c(per_min,per_1,per_5,per_15,per_30,per_50,
+                                     per_70,per_85,per_95,per_99,per_max), byrow = FALSE)
+sbbi_ust_20yr_pew <-cbind(Percentile,sbbi_ust_20yr_pew) %>%
+  rename("Percentile" = 1, "sbbi_ust_20yr_pew" = 2)
+sbbi_ust_20yr_pew 
+```
+
+
+*SBBI Steady State - Nearest 10 Years*
+```{r}
+sbbi_ust_20yr<- sbbi_ust_20yr[order(sbbi_ust_20yr$obs_date),]
+length(sbbi_ust_20yr$obs_date)
+sbbi_ust_20yr_steady <- sbbi_ust_20yr[c(1045:1164),]
+sbbi_ust_20yr_steady$sbbi_ust_20yr
+
+sbbi_ust_20yr_steady%>%
+  ggplot(aes(x=sbbi_ust_20yr)) +
+  geom_histogram(aes(y=..density..),color = "grey") +
+  labs(x = "SBBI -Distribution of US Treasury Yield (20Yrs) (2013.01-2022.12)") +
+  xlim(0,0.1) + ylim(0,100)
+```
+
+
+
+
+
+**Treasury Return Weighted Percentile - Fred Data - 3m**
+```{r, message = FALSE}
+fred_ust_3m <- read_excel("/Users/zexing/Desktop/296B Final/Historical Data/DTB3.xls", sheet = "ust_3m") %>%
+  rename("obs_date" = 1, "fred_ust_3m" = 2) %>%
+  mutate(obs_date = as.Date(obs_date,origin = "1899-12-30"))
+summary(fred_ust_3m$fred_ust_3m)
+```
+*We have 69 years of historical data, but we will use the same half life (48.5years) as the 20 year calculation for consistency.*
+```{r}
+a <- 1-(1/2)^(1/582)
+w <- NULL
+for (i in 1:829){
+  w[i] <- (1-a)^(829-i)
+}
+nw <- NULL
+for (j in 1:829){
+  nw[j] <- w[j]/sum(w)
+}
+```
+
+```{r}
+# Cbind the original data with the weight
+fred_ust_3m <- fred_ust_3m %>%
+  mutate (normalized_weight = nw)
+# Sort the data based on original data
+fred_ust_3m<- fred_ust_3m[order(fred_ust_3m$fred_ust_3m),]
+# Create a new column that calculate the running sum of the weights
+fred_ust_3m<- fred_ust_3m %>%
+  mutate(percentage = cumsum(normalized_weight))
+```
+
+
+```{r}
+# min
+per_min <- min(fred_ust_3m$fred_ust_3m)
+# 1%
+per_1 <- fred_ust_3m$fred_ust_3m[which(fred_ust_3m$percentage >= 0.009 & fred_ust_3m$percentage <= 0.01000001)] 
+# 5%
+per_5 <- fred_ust_3m$fred_ust_3m[which(fred_ust_3m$percentage >= 0.048 & fred_ust_3m$percentage <= 0.0501)] 
+# 15%
+per_15 <- fred_ust_3m$fred_ust_3m[which(fred_ust_3m$percentage >= 0.14999 & fred_ust_3m$percentage <= 0.1501)] 
+# 30%
+per_30 <- fred_ust_3m$fred_ust_3m[which(fred_ust_3m$percentage >= 0.298 & fred_ust_3m$percentage <= 0.3001)] 
+# 50%
+per_50 <- fred_ust_3m$fred_ust_3m[which(fred_ust_3m$percentage >= 0.4998 & fred_ust_3m$percentage <= 0.5001)] 
+# 70%
+per_70 <- fred_ust_3m$fred_ust_3m[which(fred_ust_3m$percentage >= 0.6988 & fred_ust_3m$percentage <= 0.7001)] 
+# 85%
+per_85 <- fred_ust_3m$fred_ust_3m[which(fred_ust_3m$percentage >= 0.849 & fred_ust_3m$percentage <= 0.8501)] 
+# 95%
+per_95 <- fred_ust_3m$fred_ust_3m[which(fred_ust_3m$percentage >= 0.949 & fred_ust_3m$percentage <= 0.9501)] 
+# 99%
+per_99 <- fred_ust_3m$fred_ust_3m[which(fred_ust_3m$percentage >= 0.989 & fred_ust_3m$percentage <= 0.9901)] 
+# Max
+per_max <- max(fred_ust_3m$fred_ust_3m)
+```
+
+```{r}
+Percentile <- as.data.frame(c("Min", "1%", "5%", "15%", "30%", "50%",
+                "70%", "85%", "95%", "99%", "Max"), byrow = FALSE)
+fred_ust_3m_pew <- as.data.frame(c(per_min,per_1,per_5,per_15,per_30,per_50,
+                                     per_70,per_85,per_95,per_99,per_max), byrow = FALSE)
+fred_ust_3m_pew <-cbind(Percentile,fred_ust_3m_pew) %>%
+  rename("Percentile" = 1, "fred_ust_3m_pew" = 2)
+fred_ust_3m_pew 
+```
+
+
+
+```{r}
+fred_ust_3m<- fred_ust_3m[order(fred_ust_3m$obs_date),]
+length(fred_ust_3m$obs_date)
+fred_ust_3m_steady <- fred_ust_3m[c(709:828),]
+fred_ust_3m_steady$fred_ust_3m
+
+fred_ust_3m_steady%>%
+  ggplot(aes(x=fred_ust_3m)) +
+  geom_histogram(aes(y=..density..),color = "grey") +
+  labs(x = "FRED -Distribution of US Treasury Yield (3 Mo.) (2013.01-2022.12)")+
+  xlim(0,0.1) + ylim(0,100)
+```
+
+
+**Treasury Return Weighted Percentile - AIRG - 20Yr**
+```{r, message = FALSE}
+airg_ust_20yr <- read.csv("/Users/zexing/Desktop/296B Final/AIRG/UST_20y.csv",
+                          header = FALSE) 
+airg_ust_20yr <-  airg_ust_20yr[,-c(1,830:841)] #take out the last year bc I simulate 70 years of data, but realize only need 69
+```
+*Use AIRG data from 1954.01.01 to 2023.01.01. This is 69 years of data. Use the same half life (48.5 years) for consistency.*
+```{r}
+a <- 1-(1/2)^(1/582)
+# ncol(airg_ust_20yr) = 828
+w <- NULL
+for (i in 1:828){
+  w[i] <- (1-a)^(828-i)
+}
+nw <- NULL
+for (j in 1:828){
+  nw[j] <- w[j]/sum(w)
+}
+```
+
+```{r}
+wdf <- data.frame(matrix(w, ncol=length(w), byrow=FALSE))
+for (row in 1:1000) {
+  wdf[row,] <- wdf[1,]
+}
+nor_wdf <- data.frame(matrix(rep(0), ncol=828, byrow=FALSE))
+for (col in 1:828) {
+  nor_wdf[,col] <- wdf[1,col]/sum(wdf)
+}
+for (row in 1:1000) {
+  nor_wdf[row,] <- nor_wdf[1,]
+}
+#sum(nor_wdf) = 1
+```
+
+
+```{r}
+# Condense the orignial data matrix to a vector
+airg_ust_20yr <-data.frame(x=unlist(airg_ust_20yr)) %>%
+  rename("airg_ust_20yr" = 1)
+# Condense the normalized weight matrix to a vector
+nw <-data.frame(x=unlist(nor_wdf))
+```
+
+```{r}
+# Cbind the original data with the weight
+airg_ust_20yr <- airg_ust_20yr %>%
+  mutate (normalized_weight = nw[,1])
+# Sort the data based on original data
+airg_ust_20yr<- airg_ust_20yr[order(airg_ust_20yr$airg_ust_20yr),]
+# Create a new column that calculate the running sum of the weights
+airg_ust_20yr<- airg_ust_20yr %>%
+  mutate(percentage = cumsum(normalized_weight))
+```
+
+```{r}
+# min
+per_min <- min(airg_ust_20yr$airg_ust_20yr)
+# 1%
+per_1 <- airg_ust_20yr$airg_ust_20yr[which(airg_ust_20yr$percentage >= 0.009998 & airg_ust_20yr$percentage <= 0.0100)] 
+# 5%
+per_5 <- airg_ust_20yr$airg_ust_20yr[which(airg_ust_20yr$percentage >= 0.0499999 & airg_ust_20yr$percentage <= 0.0500)] 
+# 15%
+per_15 <- airg_ust_20yr$airg_ust_20yr[which(airg_ust_20yr$percentage >= 0.149999 & airg_ust_20yr$percentage <= 0.15000)] 
+# 30%
+per_30 <- airg_ust_20yr$airg_ust_20yr[which(airg_ust_20yr$percentage >= 0.299998 & airg_ust_20yr$percentage <= 0.3000)] 
+# 50%
+per_50 <- airg_ust_20yr$airg_ust_20yr[which(airg_ust_20yr$percentage >= 0.499998 & airg_ust_20yr$percentage <= 0.5000)] 
+# 70%
+per_70 <- airg_ust_20yr$airg_ust_20yr[which(airg_ust_20yr$percentage >= 0.6999998 & airg_ust_20yr$percentage <= 0.70000)] 
+# 85%
+per_85 <- airg_ust_20yr$airg_ust_20yr[which(airg_ust_20yr$percentage >= 0.849999 & airg_ust_20yr$percentage <= 0.850000)] 
+# 95%
+per_95 <- airg_ust_20yr$airg_ust_20yr[which(airg_ust_20yr$percentage >= 0.949999 & airg_ust_20yr$percentage <= 0.95000)] 
+# 99%
+per_99 <- airg_ust_20yr$airg_ust_20yr[which(airg_ust_20yr$percentage >= 0.9899978 & airg_ust_20yr$percentage <= 0.99000)] 
+# Max
+per_max <- max(airg_ust_20yr$airg_ust_20yr)
+```
+
+```{r}
+Percentile <- as.data.frame(c("Min", "1%", "5%", "15%", "30%", "50%",
+                "70%", "85%", "95%", "99%", "Max"), byrow = FALSE)
+airg_ust_20yr_pew <- as.data.frame(c(per_min,per_1,per_5,per_15,per_30,per_50,
+                                     per_70,per_85,per_95,per_99,per_max), byrow = FALSE)
+airg_ust_20yr_pew <-cbind(Percentile,airg_ust_20yr_pew) %>%
+  rename("Percentile" = 1, "airg_ust_20yr_pew" = 2)
+airg_ust_20yr_pew 
+```
+
+
+
+*Steady State - AIRG 20 Year*
+```{r}
+airg_ust_20yr <- read.csv("/Users/zexing/Desktop/296B Final/AIRG/UST_20y.csv",
+                          header = FALSE) 
+airg_ust_20yr <-  airg_ust_20yr[,-c(1,830:841)]#take out the last year bc I simulate 70 years of data, but realize only need 69
+length(airg_ust_20yr)
+airg_ust_20yr_steady <- airg_ust_20yr[,c(709:828)] #(2012.12-2022.12)
+length(airg_ust_20yr_steady)
+airg_ust_20yr_steady <- as_tibble(unlist(airg_ust_20yr_steady))
+airg_ust_20yr_steady%>%
+  ggplot(aes(x=value)) +
+  geom_histogram(aes(y=..density..),color = "grey") +
+  labs(x = "AIRG - Distribution of US Treasury Yield (20Yr) (2013.01-2022.12)")+
+  xlim(0,0.1) + ylim(0,100)
+```
+
+
+
+**Treasury Return Weighted Percentile - AIRG - 3m**
+```{r, message = FALSE}
+airg_ust_3m <- read.csv("/Users/zexing/Desktop/296B Final/AIRG/UST_3m.csv",
+                          header = FALSE) 
+airg_ust_3m <-  airg_ust_3m[,-c(1,830:841)] #take out the last year bc I simulate 70 years of data, but realize only need 69
+```
+*Use AIRG data from 1954.01.01 to 2023.01.01. This is 69 years of data. Use the same half life (48.5 years) for consistency.*
+```{r,eval = FALSE}
+#eval = FALSE because just reuse the same matrix from the 20 year
+a <- 1-(1/2)^(1/582)
+# ncol(airg_ust_3m) = 828
+w <- NULL
+for (i in 1:828){
+  w[i] <- (1-a)^(828-i)
+}
+```
+
+```{r, eval = FALSE}
+#eval = FALSE because just reuse the same matrix from the 20 year
+wdf <- data.frame(matrix(w, ncol=length(w), byrow=FALSE))
+for (row in 1:1000) {
+  wdf[row,] <- wdf[1,]
+}
+nor_wdf <- data.frame(matrix(rep(0), ncol=828, byrow=FALSE))
+for (col in 1:828) {
+  nor_wdf[,col] <- wdf[1,col]/sum(wdf)
+}
+for (row in 1:1000) {
+  nor_wdf[row,] <- nor_wdf[1,]
+}
+#sum(nor_wdf) = 1
+# Condense the normalized weight matrix to a vector
+nw <-data.frame(x=unlist(nor_wdf))
+```
+
+
+```{r}
+# Condense the orignial data matrix to a vector
+airg_ust_3m <-data.frame(x=unlist(airg_ust_3m)) %>%
+  rename("airg_ust_3m" = 1)
+```
+
+```{r}
+# Cbind the original data with the weight
+airg_ust_3m <- airg_ust_3m %>%
+  mutate (normalized_weight = nw[,1])
+# Sort the data based on original data
+airg_ust_3m<- airg_ust_3m[order(airg_ust_3m$airg_ust_3m),]
+# Create a new column that calculate the running sum of the weights
+airg_ust_3m<- airg_ust_3m %>%
+  mutate(percentage = cumsum(normalized_weight))
+```
+
+```{r}
+# min
+per_min <- min(airg_ust_3m$airg_ust_3m)
+# 1%
+per_1 <- airg_ust_3m$airg_ust_3m[which(airg_ust_3m$percentage >= 0.009998 & airg_ust_3m$percentage <= 0.0100)] 
+# 5%
+per_5 <- airg_ust_3m$airg_ust_3m[which(airg_ust_3m$percentage >= 0.049998 & airg_ust_3m$percentage <= 0.0500)] 
+# 15%
+per_15 <- airg_ust_3m$airg_ust_3m[which(airg_ust_3m$percentage >= 0.149998 & airg_ust_3m$percentage <= 0.15000)] 
+# 30%
+per_30 <- airg_ust_3m$airg_ust_3m[which(airg_ust_3m$percentage >= 0.299999 & airg_ust_3m$percentage <= 0.3000)] 
+# 50%
+per_50 <- airg_ust_3m$airg_ust_3m[which(airg_ust_3m$percentage >= 0.499999 & airg_ust_3m$percentage <= 0.5000)] 
+# 70%
+per_70 <- airg_ust_3m$airg_ust_3m[which(airg_ust_3m$percentage >= 0.699999 & airg_ust_3m$percentage <= 0.70000)] 
+# 85%
+per_85 <- airg_ust_3m$airg_ust_3m[which(airg_ust_3m$percentage >= 0.849999 & airg_ust_3m$percentage <= 0.850000)] 
+# 95%
+per_95 <- airg_ust_3m$airg_ust_3m[which(airg_ust_3m$percentage >= 0.949999 & airg_ust_3m$percentage <= 0.95000)] 
+# 99%
+per_99 <- airg_ust_3m$airg_ust_3m[which(airg_ust_3m$percentage >= 0.989999 & airg_ust_3m$percentage <= 0.99000)] 
+# Max
+per_max <- max(airg_ust_3m$airg_ust_3m)
+```
+
+```{r}
+Percentile <- as.data.frame(c("Min", "1%", "5%", "15%", "30%", "50%",
+                "70%", "85%", "95%", "99%", "Max"), byrow = FALSE)
+airg_ust_3m_pew <- as.data.frame(c(per_min,per_1,per_5,per_15,per_30,per_50,
+                                     per_70,per_85,per_95,per_99,per_max), byrow = FALSE)
+airg_ust_3m_pew <-cbind(Percentile,airg_ust_3m_pew) %>%
+  rename("Percentile" = 1, "airg_ust_3m_pew" = 2)
+airg_ust_3m_pew 
+```
+
+
+```{r}
+airg_ust_3m <- read.csv("/Users/zexing/Desktop/296B Final/AIRG/UST_3m.csv",
+                          header = FALSE) 
+airg_ust_3m <-  airg_ust_3m[,-c(1,830:841)]
+airg_ust_3m_steady <- airg_ust_3m[,c(709:828)] #(2012.12-2022.12)
+length(airg_ust_3m_steady)
+airg_ust_3m_steady <- as_tibble(unlist(airg_ust_3m_steady))
+airg_ust_3m_steady%>%
+  ggplot(aes(x=value)) +
+  geom_histogram(aes(y=..density..),color = "grey") +
+  labs(x = "AIRG - Distribution of US Treasury Yield (3 Mo.) (2013.01-2022.12)")+
+  xlim(0,0.1) + ylim(0,100)
+```
+
+
+
+
+**Treasury Return Weighted Percentile - NAIC - 3m**
+```{r, message = FALSE}
+naic_ust_3m <- read.csv("/Users/zexing/Desktop/296B Final/NAIC/naic_ust_3m.csv") 
+naic_ust_3m <- naic_ust_3m[,-1]
+```
+
+*NAIC data is given. This contains 100 years of data. Use the same half life (48.5 years) for consistency.*
+```{r}
+a <- 1-(1/2)^(1/582)
+# ncol(naic_ust_3m) = 1200
+w <- NULL
+for (i in 1:ncol(naic_ust_3m)){
+  w[i] <- (1-a)^(828-i)
+}
+```
+
+```{r}
+wdf <- data.frame(matrix(w, ncol=length(w), byrow=FALSE))
+for (row in 1:1000) {
+  wdf[row,] <- wdf[1,]
+}
+nor_wdf <- data.frame(matrix(rep(0), ncol=ncol(wdf), byrow=FALSE))
+for (col in 1:ncol(wdf)) {
+  nor_wdf[,col] <- wdf[1,col]/sum(wdf)
+}
+for (row in 1:1000) {
+  nor_wdf[row,] <- nor_wdf[1,]
+}
+#sum(nor_wdf) = 1
+# Condense the normalized weight matrix to a vector
+nw <-data.frame(x=unlist(nor_wdf))
+```
+
+
+```{r}
+# Condense the orignial data matrix to a vector
+naic_ust_3m <-data.frame(x=unlist(naic_ust_3m)) %>%
+  rename("naic_ust_3m" = 1)
+```
+
+```{r}
+# Cbind the original data with the weight
+naic_ust_3m <- naic_ust_3m %>%
+  mutate (normalized_weight = nw[,1])
+# Sort the data based on original data
+naic_ust_3m<- naic_ust_3m[order(naic_ust_3m$naic_ust_3m),]
+# Create a new column that calculate the running sum of the weights
+naic_ust_3m<- naic_ust_3m %>%
+  mutate(percentage = cumsum(normalized_weight))
+```
+
+```{r}
+# min
+per_min <- min(naic_ust_3m$naic_ust_3m)
+# 1%
+per_1 <- naic_ust_3m$naic_ust_3m[which(naic_ust_3m$percentage >= 0.009999 & naic_ust_3m$percentage <= 0.0100)] 
+# 5%
+per_5 <- naic_ust_3m$naic_ust_3m[which(naic_ust_3m$percentage >= 0.049999 & naic_ust_3m$percentage <= 0.0500)] 
+# 15%
+per_15 <- naic_ust_3m$naic_ust_3m[which(naic_ust_3m$percentage >= 0.149999 & naic_ust_3m$percentage <= 0.15000)] 
+# 30%
+per_30 <- naic_ust_3m$naic_ust_3m[which(naic_ust_3m$percentage >= 0.299999 & naic_ust_3m$percentage <= 0.3000)] 
+# 50%
+per_50 <- naic_ust_3m$naic_ust_3m[which(naic_ust_3m$percentage >= 0.499999 & naic_ust_3m$percentage <= 0.5000)] 
+# 70%
+per_70 <- naic_ust_3m$naic_ust_3m[which(naic_ust_3m$percentage >= 0.699999 & naic_ust_3m$percentage <= 0.70000)] 
+# 85%
+per_85 <- naic_ust_3m$naic_ust_3m[which(naic_ust_3m$percentage >= 0.849999 & naic_ust_3m$percentage <= 0.850000)] 
+# 95%
+per_95 <- naic_ust_3m$naic_ust_3m[which(naic_ust_3m$percentage >= 0.949999 & naic_ust_3m$percentage <= 0.95000)] 
+# 99%
+per_99 <- naic_ust_3m$naic_ust_3m[which(naic_ust_3m$percentage >= 0.989998 & naic_ust_3m$percentage <= 0.99000)] 
+# Max
+per_max <- max(naic_ust_3m$naic_ust_3m)
+```
+
+```{r}
+Percentile <- as.data.frame(c("Min", "1%", "5%", "15%", "30%", "50%",
+                "70%", "85%", "95%", "99%", "Max"), byrow = FALSE)
+naic_ust_3m_pew <- as.data.frame(c(per_min,per_1,per_5,per_15,per_30,per_50,
+                                     per_70,per_85,per_95,per_99,per_max), byrow = FALSE)
+naic_ust_3m_pew <-cbind(Percentile,naic_ust_3m_pew) %>%
+  rename("Percentile" = 1, "naic_ust_3m_pew" = 2)
+naic_ust_3m_pew 
+```
+
+
+*Steady State - NAIC 3Mo*
+```{r}
+#rm(list = ls())
+naic_ust_3m <- read.csv("/Users/zexing/Desktop/296B Final/NAIC/naic_ust_3m.csv") 
+naic_ust_3m <- naic_ust_3m[,-1]
+length(naic_ust_3m)
+naic_ust_3m_steady <- naic_ust_3m[,c(1081:1200)] 
+length(naic_ust_3m_steady)
+naic_ust_3m_steady <- as_tibble(unlist(naic_ust_3m_steady))
+naic_ust_3m_steady%>%
+  ggplot(aes(x=value)) +
+  geom_histogram(aes(y=..density..),color = "grey") +
+  labs(x = "NAIC - Distribution of US Treasury Yield (3 Mo.) (Recent 10 Yrs)")+
+  xlim(0,0.1) + ylim(0,100)
+```
+
+
+**Treasury Return Weighted Percentile - NAIC - 20yr**
+```{r, message = FALSE}
+naic_ust_20yr <- read.csv("/Users/zexing/Desktop/296B Final/NAIC/naic_ust_20yr.csv") 
+naic_ust_20yr <- naic_ust_20yr[,-1]
+```
+
+
+
+*Steady State - NAIC 20Yr*
+```{r}
+#rm(list = ls())
+naic_ust_20yr <- read.csv("/Users/zexing/Desktop/296B Final/NAIC/naic_ust_20yr.csv") 
+naic_ust_20yr <- naic_ust_20yr[,-1]
+length(naic_ust_20yr)
+naic_ust_20yr_steady <- naic_ust_20yr[,c(1081:1200)] 
+length(naic_ust_20yr_steady)
+naic_ust_20yr_steady <- as_tibble(unlist(naic_ust_20yr_steady))
+naic_ust_20yr_steady%>%
+  ggplot(aes(x=value)) +
+  geom_histogram(aes(y=..density..),color = "grey") +
+  labs(x = "NAIC - Distribution of US Treasury Yield (20 Yr.) (Recent 10 Yrs)")+
+  xlim(0,0.1) + ylim(0,100)
+```
+
+
+
+
+
+*NAIC data is given. This contains 100 years of data. Use the same half life (48.5 years) for consistency.*
+```{r, eval = FALSE}
+# eval = FALSE because will reuse the matrix from 3mo
+a <- 1-(1/2)^(1/582)
+# ncol(naic_ust_20yr) = 1200
+w <- NULL
+for (i in 1:ncol(naic_ust_20yr)){
+  w[i] <- (1-a)^(828-i)
+}
+```
+
+```{r, eval = FALSE}
+# eval = FALSE because will reuse the matrix from 3mo
+wdf <- data.frame(matrix(w, ncol=length(w), byrow=FALSE))
+for (row in 1:1000) {
+  wdf[row,] <- wdf[1,]
+}
+nor_wdf <- data.frame(matrix(rep(0), ncol=ncol(wdf), byrow=FALSE))
+for (col in 1:ncol(wdf)) {
+  nor_wdf[,col] <- wdf[1,col]/sum(wdf)
+}
+for (row in 1:1000) {
+  nor_wdf[row,] <- nor_wdf[1,]
+}
+#sum(nor_wdf) = 1
+# Condense the normalized weight matrix to a vector
+nw <-data.frame(x=unlist(nor_wdf))
+```
+
+```{r}
+# Condense the orignial data matrix to a vector
+naic_ust_20yr <-data.frame(x=unlist(naic_ust_20yr)) %>%
+  rename("naic_ust_20yr" = 1)
+```
+
+```{r}
+# Cbind the original data with the weight
+naic_ust_20yr <- naic_ust_20yr %>%
+  mutate (normalized_weight = nw[,1])
+# Sort the data based on original data
+naic_ust_20yr<- naic_ust_20yr[order(naic_ust_20yr$naic_ust_20yr),]
+# Create a new column that calculate the running sum of the weights
+naic_ust_20yr<- naic_ust_20yr %>%
+  mutate(percentage = cumsum(normalized_weight))
+```
+
+```{r}
+# min
+per_min <- min(naic_ust_20yr$naic_ust_20yr)
+# 1%
+per_1 <- naic_ust_20yr$naic_ust_20yr[which(naic_ust_20yr$percentage >= 0.0099999 & naic_ust_20yr$percentage <= 0.0100)] 
+# 5%
+per_5 <- naic_ust_20yr$naic_ust_20yr[which(naic_ust_20yr$percentage >= 0.049999 & naic_ust_20yr$percentage <= 0.0500)] 
+# 15%
+per_15 <- naic_ust_20yr$naic_ust_20yr[which(naic_ust_20yr$percentage >= 0.149999 & naic_ust_20yr$percentage <= 0.15000)] 
+# 30%
+per_30 <- naic_ust_20yr$naic_ust_20yr[which(naic_ust_20yr$percentage >= 0.299999 & naic_ust_20yr$percentage <= 0.3000)] 
+# 50%
+per_50 <- naic_ust_20yr$naic_ust_20yr[which(naic_ust_20yr$percentage >= 0.499999 & naic_ust_20yr$percentage <= 0.5000)] 
+# 70%
+per_70 <- naic_ust_20yr$naic_ust_20yr[which(naic_ust_20yr$percentage >= 0.699999 & naic_ust_20yr$percentage <= 0.70000)] 
+# 85%
+per_85 <- naic_ust_20yr$naic_ust_20yr[which(naic_ust_20yr$percentage >= 0.849999 & naic_ust_20yr$percentage <= 0.850000)] 
+# 95%
+per_95 <- naic_ust_20yr$naic_ust_20yr[which(naic_ust_20yr$percentage >= 0.9499998 & naic_ust_20yr$percentage <= 0.95000)] 
+# 99%
+per_99 <- naic_ust_20yr$naic_ust_20yr[which(naic_ust_20yr$percentage >= 0.9899994 & naic_ust_20yr$percentage <= 0.99000)] 
+# Max
+per_max <- max(naic_ust_20yr$naic_ust_20yr)
+```
+
+```{r}
+Percentile <- as.data.frame(c("Min", "1%", "5%", "15%", "30%", "50%",
+                "70%", "85%", "95%", "99%", "Max"), byrow = FALSE)
+naic_ust_20yr_pew <- as.data.frame(c(per_min,per_1,per_5,per_15,per_30,per_50,
+                                     per_70,per_85,per_95,per_99,per_max), byrow = FALSE)
+naic_ust_20yr_pew <-cbind(Percentile,naic_ust_20yr_pew) %>%
+  rename("Percentile" = 1, "naic_ust_20yr_pew" = 2)
+naic_ust_20yr_pew 
+```
+
+#### Part II: Equity Risk Premium based on UST-1M
+
+$$
+Equity\;Risk\; Premium = \frac{Large\;Cap\;TR}{US\;Treasury\;TR_{1mo}}-1
+$$
+
+**SBBI - 1926.1.1 to 2022.12.01**
+```{r, message = FALSE}
+sbbi_large_cap <- read_excel("/Users/zexing/Desktop/296B Final/Historical Data/SBBI Data for Capital Markets (2022_12_31).xlsx", sheet = "large_cap") %>%
+  rename("obs_date" = 1, "sbbi_large_cap" = 2,
+         "ust_1m" = 3, "sbbi_equity_return" = 4, "cpi" = 5) %>%
+  mutate(obs_date = as.Date(obs_date,origin = "1899-12-30"))
+```
+
+*Summary of the overall distribution*
+```{r}
+summary(sbbi_large_cap$sbbi_equity_return)
+sbbi_large_cap %>%
+  ggplot(aes(x=sbbi_equity_return))+
+  geom_histogram(aes(y=..density..),color = "grey")+
+  labs(x = "Distribution of Mean of Historical Equity Return (Annual)")
+```
+
+*Bucket based on inflation*
+```{r,results="hide"}
+sbbi_large_cap <- sbbi_large_cap[order(sbbi_large_cap$cpi),]
+sum(sbbi_large_cap$cpi <=0)
+sum((sbbi_large_cap$cpi >0) & (sbbi_large_cap$cpi<=0.025))
+sum((sbbi_large_cap$cpi >0.025) & (sbbi_large_cap$cpi<=0.05))
+sum(sbbi_large_cap$cpi >=0.05)
+sbbi_large_cap <- sbbi_large_cap %>%
+  mutate(bucket = c(rep("Deflation",10),
+                    rep("Low",35),
+                    rep("Medium",33),
+                    rep("High",18)))
+#sbbi_large_cap <- sbbi_large_cap[order(sbbi_large_cap$obs_date),]
+```
+
+*Mean of Equity Return within Inflation Bucket*
+```{r}
+sbbi_er_mean <- sbbi_large_cap %>%
+	group_by(bucket) %>%
+	summarise(sbbi_er_mean = mean(sbbi_equity_return))
+sbbi_er_mean <- sbbi_er_mean[c(1,3,4,2),]
+sbbi_er_mean
+```
+
+**NAIC - 100 Years of Data(Given)**
+
+*First load all the data*
+```{r}
+naic_large_cap <- read.csv("/Users/zexing/Desktop/296B Final/NAIC/naic_large_cap_tr.csv")
+naic_large_cap <- naic_large_cap[,-1]
+
+naic_ust_1m <-read.csv("/Users/zexing/Desktop/296B Final/NAIC/naic_ust_1m.csv")
+naic_ust_1m <- naic_ust_1m[,-1]
+summary(unlist(naic_ust_1m))
+```
+
+*Convert to Annual Data*
+```{r}
+naic_large_cap_annual <- data.frame(matrix(1000, ncol=1, nrow = 1000))
+for (i in 1:1200){
+  naic_large_cap_annual[,i+1] <- naic_large_cap_annual[,i]*(1+naic_large_cap[,i])
+}
+holder <- data.frame(matrix(0, ncol=100, nrow = 1000))
+for (i in 1:100){
+  holder[,i] <- naic_large_cap_annual[,1+12*i]/naic_large_cap_annual[,(1+12*(i-1))]-1
+}
+naic_large_cap_annual <- holder
+```
+
+```{r}
+summary(sbbi_large_cap$sbbi_large_cap)
+summary(unlist(naic_large_cap_annual))
+```
+
+
+```{r}
+naic_ust_1m_annual <- data.frame(matrix(1000, ncol=1, nrow = 1000))
+for (i in 1:1200){
+  naic_ust_1m_annual[,i+1] <- naic_ust_1m_annual[,i]*(1+naic_ust_1m[,i]/12)
+}
+holder <- data.frame(matrix(0, ncol=100, nrow = 1000))
+for (i in 1:100){
+  holder[,i] <- naic_ust_1m_annual[,1+12*i]/naic_ust_1m_annual[,(1+12*(i-1))]-1
+}
+naic_ust_1m_annual <- holder
+```
+
+```{r}
+summary(sbbi_large_cap$ust_1m)
+summary(unlist(naic_ust_1m_annual))
+```
+
+*Then calculate the Equity Return. The formula is (1+large_cap)/(1+ust_1m) - 1*
+```{r}
+naic_er_annual <- data.frame(matrix(0, ncol=100, nrow = 1000))
+for (col in 1:100){
+  for (row in 1:1000){
+    naic_er_annual[row,col] = (1+naic_large_cap_annual[row,col])/(1+naic_ust_1m_annual[row,col]) - 1
+  }
+}
+```
+
+
+```{r}
+summary(sbbi_large_cap$sbbi_equity_return)
+summary(unlist(naic_er_annual))
+x <- unlist(naic_er_annual)
+quantile(x,0.01)
+quantile(x,0.05)
+quantile(x,0.1)
+quantile(x,0.9)
+quantile(x,0.95)
+quantile(x,0.99)
+
+
+quantile(sbbi_large_cap$sbbi_equity_return,0.01)
+quantile(sbbi_large_cap$sbbi_equity_return,0.05)
+quantile(sbbi_large_cap$sbbi_equity_return,0.1)
+quantile(sbbi_large_cap$sbbi_equity_return,0.9)
+quantile(sbbi_large_cap$sbbi_equity_return,0.95)
+quantile(sbbi_large_cap$sbbi_equity_return,0.99)
+```
+
+
+```{r}
+mean_container <- numeric(1000)
+for (i in 1:1000){
+  mean_container[i] = mean(t(as.tibble(naic_er_annual[i,])))
+}
+mean_container <- as.tibble(mean_container)
+mean_container %>%
+  ggplot(aes(x=value)) +
+  geom_histogram(aes(y=..density..),color = "grey") +
+    labs(x = "Distribution of Mean of NAIC Simulated Equity Return (Annual)")
+```
+
+**AIRG - 69 Years of Data 1954.1 - 2022.12**
+
+**AIRG Large Cap (Annual)**
+```{r}
+airg_large_cap <- read.csv("/Users/zexing/Desktop/296B Final/AIRG/airg_large_cap_annual.csv",header = FALSE)
+holder <- data.frame(matrix(0, ncol=70, nrow = 1000))
+for (col in 1:70){
+  holder[,col] = airg_large_cap[,col+1]/airg_large_cap[,col]-1
+}
+airg_large_cap <- holder[,-70]#take out the last year bc I simulate 70 years of data, but realize only need 69
+```
+
+**UST - 3M (Annual)**
+```{r, message = FALSE}
+airg_ust_3m <- read.csv("/Users/zexing/Desktop/296B Final/AIRG/airg_ust_3m_annual.csv",
+                          header = FALSE) 
+airg_ust_3m <-  airg_ust_3m[,-c(1,71)]#take out the last year bc I simulate 70 years of data, but realize only need 69
+summary(unlist(airg_ust_3m))
+```
+
+*Then calculate the Equity Return. The formula is (1+large_cap)/(1+ust_3m) - 1*
+```{r}
+airg_er_annual <- data.frame(matrix(0, ncol=69, nrow = 1000))
+for (col in 1:69){
+  for (row in 1:1000){
+    airg_er_annual[row,col] = (1+airg_large_cap[row,col])/(1+airg_ust_3m[row,col]) - 1
+  }
+}
+summary(unlist(airg_er_annual))
+```
+
+
+```{r}
+x <- unlist(airg_er_annual)
+quantile(x,0.01)
+quantile(x,0.05)
+quantile(x,0.1)
+quantile(x,0.9)
+quantile(x,0.95)
+quantile(x,0.99)
+```
+
+
+```{r}
+mean_container <- numeric(1000)
+for (i in 1:1000){
+  mean_container[i] = mean(t(as.tibble(airg_er_annual[i,])))
+}
+mean_container <- as.tibble(mean_container)
+mean_container %>%
+  ggplot(aes(x=value)) +
+  geom_histogram(aes(y=..density..),color = "grey") +
+    labs(x = "Distribution of Mean of AIRG Simulated Equity Return (Annual)")
+```
+
+
+```{r}
+sbbi_large_cap %>%
+  ggplot(aes(x=sbbi_equity_return)) +
+  geom_histogram(aes(y=..density..),color = "grey") +
+  labs(x = "SBBI - Equity Risk Premium")
+
+naic_er_annual_v <- as.tibble(unlist(naic_er_annual))
+naic_er_annual_v%>%
+  ggplot(aes(x=value)) +
+  geom_histogram(aes(y=..density..),color = "grey") +
+  labs(x = "NAIC - Equity Risk Premium")
+
+airg_er_annual_v <- as.tibble(unlist(airg_er_annual))
+airg_er_annual_v %>%
+  ggplot(aes(x=value)) +
+  geom_histogram(aes(y=..density..),color = "grey") +
+  labs(x = "AIRG - Equity Risk Premium")
+```
+
+
+**Part III: Bond Premium based on UST-1M**
+
+$$
+Bond\;Risk\;Premium = \frac{Bond\;Return}{US\;Treasury\;TR_{1mo.}}-1
+$$
+
+**SBBI - 1926.1.1 to 2022.12.01**
+
+**SBBI - Intermediate Government Bond (5Yr)**
+```{r, message = FALSE}
+sbbi_it_bond <- read_excel("/Users/zexing/Desktop/296B Final/Historical Data/SBBI Data for Capital Markets (2022_12_31).xlsx", sheet = "it_bond") %>%
+  rename("obs_date" = 1, "sbbi_it_bond" = 2,
+         "ust_1m" = 3, "sbbi_it_bond_risk_premium" = 4, "cpi" = 5) %>%
+  mutate(obs_date = as.Date(obs_date,origin = "1899-12-30"))
+```
+
+*Summary of the overall distribution*
+```{r}
+summary(sbbi_it_bond$sbbi_it_bond_risk_premium)
+sbbi_it_bond %>%
+  ggplot(aes(x=sbbi_it_bond_risk_premium))+
+  geom_histogram(aes(y=..density..),color = "grey")+
+  labs(x = "Distribution of Mean of Historical IT Bond Risk Premium (Annual)")
+```
+
+*Bucket based on inflation*
+```{r,results="hide"}
+sbbi_it_bond <- sbbi_it_bond[order(sbbi_it_bond$cpi),]
+sum(sbbi_it_bond$cpi <=0)
+sum((sbbi_it_bond$cpi >0) & (sbbi_it_bond$cpi<=0.025))
+sum((sbbi_it_bond$cpi >0.025) & (sbbi_it_bond$cpi<=0.05))
+sum(sbbi_it_bond$cpi >=0.05)
+sbbi_it_bond <- sbbi_it_bond %>%
+  mutate(bucket = c(rep("Deflation",10),
+                    rep("Low",35),
+                    rep("Medium",33),
+                    rep("High",18)))
+#sbbi_it_bond <- sbbi_it_bond[order(sbbi_it_bond$obs_date),]
+```
+
+*Mean of Equity Return within Inflation Bucket*
+```{r}
+sbbi_brp_mean <- sbbi_it_bond %>%
+	group_by(bucket) %>%
+	summarise(sbbi_brp_mean = mean(sbbi_it_bond_risk_premium))
+sbbi_brp_mean <- sbbi_brp_mean[c(1,3,4,2),]
+sbbi_brp_mean
+```
+
+
+**SBBI - Long-Term Government Bond (20Yr)**
+```{r, message = FALSE}
+sbbi_lt_bond <- read_excel("/Users/zexing/Desktop/296B Final/Historical Data/SBBI Data for Capital Markets (2022_12_31).xlsx", sheet = "lt_bond") %>%
+  rename("obs_date" = 1, "sbbi_lt_bond" = 2,
+         "ust_1m" = 3, "sbbi_lt_bond_risk_premium" = 4, "cpi" = 5) %>%
+  mutate(obs_date = as.Date(obs_date,origin = "1899-12-30"))
+```
+
+*Summary of the overall distribution*
+```{r}
+summary(sbbi_lt_bond$sbbi_lt_bond_risk_premium)
+sbbi_lt_bond %>%
+  ggplot(aes(x=sbbi_lt_bond_risk_premium))+
+  geom_histogram(aes(y=..density..),color = "grey")+
+  labs(x = "Distribution of Mean of Historical LT Bond Risk Premium (Annual)")
+```
+
+*Bucket based on inflation*
+```{r,results="hide"}
+sbbi_lt_bond <- sbbi_lt_bond[order(sbbi_lt_bond$cpi),]
+sum(sbbi_lt_bond$cpi <=0)
+sum((sbbi_lt_bond$cpi >0) & (sbbi_lt_bond$cpi<=0.025))
+sum((sbbi_lt_bond$cpi >0.025) & (sbbi_lt_bond$cpi<=0.05))
+sum(sbbi_lt_bond$cpi >=0.05)
+sbbi_lt_bond <- sbbi_lt_bond %>%
+  mutate(bucket = c(rep("Deflation",10),
+                    rep("Low",35),
+                    rep("Medium",33),
+                    rep("High",18)))
+#sbbi_lt_bond <- sbbi_lt_bond[order(sbbi_lt_bond$obs_date),]
+```
+
+*Mean of Equity Return within Inflation Bucket*
+```{r}
+sbbi_brp_mean <- sbbi_lt_bond %>%
+	group_by(bucket) %>%
+	summarise(sbbi_brp_mean = mean(sbbi_lt_bond_risk_premium))
+sbbi_brp_mean <- sbbi_brp_mean[c(1,3,4,2),]
+sbbi_brp_mean
+```
+
+**NAIC - 100 Years of Data(Given)**
+
+**Intermediate Bond Return (5Yr)**
+```{r}
+naic_int_govt <- read.csv("/Users/zexing/Desktop/296B Final/NAIC/naic_int_govt_tr.csv")
+naic_int_govt <- naic_int_govt[,-1]
+
+naic_ust_1m <-read.csv("/Users/zexing/Desktop/296B Final/NAIC/naic_ust_1m.csv")
+naic_ust_1m <- naic_ust_1m[,-1]
+```
+
+*Convert to Annual Data*
+```{r}
+naic_int_govt_annual <- data.frame(matrix(1000, ncol=1, nrow = 1000))
+for (i in 1:1200){
+  naic_int_govt_annual[,i+1] <- naic_int_govt_annual[,i]*(1+naic_int_govt[,i])
+}
+holder <- data.frame(matrix(0, ncol=100, nrow = 1000))
+for (i in 1:100){
+  holder[,i] <- naic_int_govt_annual[,1+12*i]/naic_int_govt_annual[,(1+12*(i-1))]-1
+}
+naic_int_govt_annual <- holder
+```
+
+
+```{r}
+summary(sbbi_it_bond$sbbi_it_bond)
+summary(unlist(naic_int_govt_annual))
+```
+
+```{r}
+naic_ust_1m_annual <- data.frame(matrix(1000, ncol=1, nrow = 1000))
+for (i in 1:1200){
+  naic_ust_1m_annual[,i+1] <- naic_ust_1m_annual[,i]*(1+naic_ust_1m[,i]/12)
+}
+holder <- data.frame(matrix(0, ncol=100, nrow = 1000))
+for (i in 1:100){
+  holder[,i] <- naic_ust_1m_annual[,1+12*i]/naic_ust_1m_annual[,(1+12*(i-1))]-1
+}
+naic_ust_1m_annual <- holder
+```
+
+
+```{r}
+summary(unlist(sbbi_it_bond$ust_1m))
+summary(unlist(naic_ust_1m_annual))
+```
+
+
+*Then calculate the Bond Risk Premium.*
+```{r}
+naic_it_brp_annual <- data.frame(matrix(0, ncol=100, nrow = 1000))
+for (col in 1:100){
+  for (row in 1:1000){
+    naic_it_brp_annual[row,col] = (1+naic_int_govt_annual[row,col])/(1+naic_ust_1m_annual[row,col]) - 1
+  }
+}
+summary(unlist(naic_it_brp_annual))
+```
+
+```{r}
+x <- unlist(naic_it_brp_annual)
+x<- sbbi_it_bond$sbbi_it_bond_risk_premium
+quantile(x,0.01)
+quantile(x,0.05)
+quantile(x,0.1)
+quantile(x,0.9)
+quantile(x,0.95)
+quantile(x,0.99)
+```
+
+```{r}
+mean_container <- numeric(1000)
+for (i in 1:1000){
+  mean_container[i] = mean(t(as.tibble(naic_it_brp_annual[i,])))
+}
+mean_container <- as.tibble(mean_container)
+mean_container %>%
+  ggplot(aes(x=value)) +
+  geom_histogram(aes(y=..density..),color = "grey") +
+    labs(x = "Distribution of Mean of NAIC Simulated Bond Risk Premium (IT Govt) (Annual)")
+```
+
+```{r}
+sbbi_it_bond %>%
+  ggplot(aes(x=sbbi_it_bond_risk_premium)) +
+  geom_histogram(aes(y=..density..),color = "grey") +
+  labs(x = "SBBI - Bond Risk Premium Int. Govt Bond (5Yr)")
+
+
+naic_it_brp_annual_v <- as.tibble(unlist(naic_it_brp_annual))
+naic_it_brp_annual_v%>%
+  ggplot(aes(x=value)) +
+  geom_histogram(aes(y=..density..),color = "grey") +
+  labs(x = "NAIC - Bond Risk Premium Int. Govt Bond (5Yr)")
+```
+
+
+
+**LongTerm Bond Return (20Yr)**
+```{r}
+naic_lt_govt <- read.csv("/Users/zexing/Desktop/296B Final/NAIC/naic_lt_govt_tr.csv")
+naic_lt_govt <- naic_lt_govt[,-1]
+
+naic_ust_1m <-read.csv("/Users/zexing/Desktop/296B Final/NAIC/naic_ust_1m.csv")
+naic_ust_1m <- naic_ust_1m[,-1]
+```
+
+*Convert to Annual Data*
+```{r}
+naic_lt_govt_annual <- data.frame(matrix(1000, ncol=1, nrow = 1000))
+for (i in 1:1200){
+  naic_lt_govt_annual[,i+1] <- naic_lt_govt_annual[,i]*(1+naic_lt_govt[,i])
+}
+holder <- data.frame(matrix(0, ncol=100, nrow = 1000))
+for (i in 1:100){
+  holder[,i] <- naic_lt_govt_annual[,1+12*i]/naic_lt_govt_annual[,(1+12*(i-1))]-1
+}
+naic_lt_govt_annual <- holder
+```
+
+```{r}
+summary(sbbi_lt_bond$sbbi_lt_bond)
+summary(unlist(naic_lt_govt_annual))
+```
+
+
+```{r}
+naic_ust_1m_annual <- data.frame(matrix(1000, ncol=1, nrow = 1000))
+for (i in 1:1200){
+  naic_ust_1m_annual[,i+1] <- naic_ust_1m_annual[,i]*(1+naic_ust_1m[,i]/12)
+}
+holder <- data.frame(matrix(0, ncol=100, nrow = 1000))
+for (i in 1:100){
+  holder[,i] <- naic_ust_1m_annual[,1+12*i]/naic_ust_1m_annual[,(1+12*(i-1))]-1
+}
+naic_ust_1m_annual <- holder
+```
+
+```{r}
+summary(sbbi_lt_bond$ust_1m)
+summary(unlist(naic_ust_1m_annual))
+```
+
+
+*Then calculate the Bond Risk Premium*
+```{r}
+naic_lt_brp_annual <- data.frame(matrix(0, ncol=100, nrow = 1000))
+for (col in 1:100){
+  for (row in 1:1000){
+    naic_lt_brp_annual[row,col] = (1+naic_lt_govt_annual[row,col])/(1+naic_ust_1m_annual[row,col]) - 1
+  }
+}
+summary(unlist(naic_lt_brp_annual))
+```
+
+```{r}
+x<- sbbi_lt_bond$sbbi_lt_bond_risk_premium
+quantile(x,0.01)
+quantile(x,0.05)
+quantile(x,0.1)
+quantile(x,0.9)
+quantile(x,0.95)
+quantile(x,0.99)
+```
+
+```{r}
+mean_container <- numeric(1000)
+for (i in 1:1000){
+  mean_container[i] = mean(t(as.tibble(naic_lt_brp_annual[i,])))
+}
+mean_container <- as.tibble(mean_container)
+mean_container %>%
+  ggplot(aes(x=value)) +
+  geom_histogram(aes(y=..density..),color = "grey") +
+    labs(x = "Distribution of Mean of NAIC Simulated Bond Risk Premium (LT 20 Yr)(Annual)")
+```
+
+
+**AIRG - 69 Years of Data 1954.1 - 2022.12**
+
+**AIRG IT Govt Bond TR (Annual)**
+```{r}
+airg_it_govt <- read.csv("/Users/zexing/Desktop/296B Final/AIRG/airg_it_govt_annual.csv",header = FALSE)
+holder <- data.frame(matrix(0, ncol=70, nrow = 1000))
+for (col in 1:70){
+  holder[,col] = airg_it_govt[,col+1]/airg_it_govt[,col]-1
+}
+airg_it_govt <- holder[,-70] #take out the last year bc I simulate 70 years of data, but realize only need 69
+```
+
+**UST - 3M (Annual)**
+```{r, message = FALSE}
+airg_ust_3m <- read.csv("/Users/zexing/Desktop/296B Final/AIRG/airg_ust_3m_annual.csv",
+                          header = FALSE) 
+airg_ust_3m <-  airg_ust_3m[,-c(1,71)]
+```
+
+*Then calculate the Bond Risk Premium. The formula is (1+airg_it_govt)/(1+airg_ust_3m)- 1*
+```{r}
+airg_it_brp_annual <- data.frame(matrix(0, ncol=69, nrow = 1000))
+for (col in 1:69){
+  for (row in 1:1000){
+    airg_it_brp_annual[row,col] = (1+airg_it_govt[row,col])/(1+airg_ust_3m[row,col]) - 1
+  }
+}
+summary(unlist(airg_it_brp_annual))
+```
+
+```{r}
+x<- unlist(airg_it_brp_annual)
+quantile(x,0.01)
+quantile(x,0.05)
+quantile(x,0.1)
+quantile(x,0.9)
+quantile(x,0.95)
+quantile(x,0.99)
+```
+
+
+
+```{r}
+mean_container <- numeric(1000)
+for (i in 1:1000){
+  mean_container[i] = mean(t(as.tibble(airg_it_brp_annual[i,])))
+}
+mean_container <- as.tibble(mean_container)
+mean_container %>%
+  ggplot(aes(x=value)) +
+  geom_histogram(aes(y=..density..),color = "grey") +
+    labs(x = "Distribution of Mean of AIRG Simulated Bond Risk Premium (Annual)")
+```
+
+
+
+```{r}
+sbbi_lt_bond %>%
+  ggplot(aes(x=sbbi_lt_bond_risk_premium)) +
+  geom_histogram(aes(y=..density..),color = "grey") +
+  labs(x = "SBBI - Bond Risk Premium LT. Govt Bond (20Yr)")
+
+naic_lt_brp_annual_v <- as.tibble(unlist(naic_lt_brp_annual))
+naic_lt_brp_annual_v%>%
+  ggplot(aes(x=value)) +
+  geom_histogram(aes(y=..density..),color = "grey") +
+  labs(x = "NAIC - Bond Risk Premium LT. Govt Bond (20Yr)")
+
+airg_it_brp_annual_v <- as.tibble(unlist(airg_it_brp_annual))
+airg_it_brp_annual_v%>%
+  ggplot(aes(x=value)) +
+  geom_histogram(aes(y=..density..),color = "grey") +
+  labs(x = "AIRG - Bond Risk Premium IT. Govt Bond (20Yr)")
+```
+
+
+
+
+
+

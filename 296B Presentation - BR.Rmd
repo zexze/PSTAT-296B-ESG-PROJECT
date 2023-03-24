@@ -1,0 +1,391 @@
+---
+title: "296B Presentation - BR"
+author: "ZeXing Hu"
+date: "2023-03-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#setwd("/Users/zexing/Desktop/296B Final/")
+#rm(list=ls())
+```
+
+```{r, message = FALSE}
+library(lubridate)
+library(ggplot2)
+library(kableExtra)
+library(tidyverse)
+library(dplyr)
+library(readxl, lib.loc = "/Library/Frameworks/R.framework/Versions/4.2/Resources/library")
+```
+
+**Part III: Bond Premium based on UST-1M**
+
+$$
+Bond\;Risk\;Premium = \frac{Bond\;Return}{US\;Treasury\;TR_{1mo.}}-1
+$$
+
+**SBBI - 1926.1.1 to 2022.12.01**
+
+**SBBI - Intermediate Government Bond (5Yr)**
+```{r, message = FALSE}
+sbbi_it_bond <- read_excel("/Users/zexing/Desktop/296B Final/Historical Data/SBBI Data for Capital Markets (2022_12_31).xlsx", sheet = "it_bond") %>%
+  rename("obs_date" = 1, "sbbi_it_bond" = 2,
+         "ust_1m" = 3, "sbbi_it_bond_risk_premium" = 4, "cpi" = 5) %>%
+  mutate(obs_date = as.Date(obs_date,origin = "1899-12-30"))
+```
+
+*Summary of the overall distribution*
+```{r}
+summary(sbbi_it_bond$sbbi_it_bond_risk_premium)
+sbbi_it_bond %>%
+  ggplot(aes(x=sbbi_it_bond_risk_premium))+
+  geom_histogram(aes(y=..density..),color = "grey")+
+  labs(x = "Distribution of Mean of Historical IT Bond Risk Premium (Annual)")
+```
+
+*Bucket based on inflation*
+```{r,results="hide"}
+sbbi_it_bond <- sbbi_it_bond[order(sbbi_it_bond$cpi),]
+sum(sbbi_it_bond$cpi <=0)
+sum((sbbi_it_bond$cpi >0) & (sbbi_it_bond$cpi<=0.025))
+sum((sbbi_it_bond$cpi >0.025) & (sbbi_it_bond$cpi<=0.05))
+sum(sbbi_it_bond$cpi >=0.05)
+sbbi_it_bond <- sbbi_it_bond %>%
+  mutate(bucket = c(rep("Deflation",10),
+                    rep("Low",35),
+                    rep("Medium",33),
+                    rep("High",18)))
+#sbbi_it_bond <- sbbi_it_bond[order(sbbi_it_bond$obs_date),]
+```
+
+*Mean of Equity Return within Inflation Bucket*
+```{r}
+sbbi_brp_mean <- sbbi_it_bond %>%
+	group_by(bucket) %>%
+	summarise(sbbi_brp_mean = mean(sbbi_it_bond_risk_premium))
+sbbi_brp_mean <- sbbi_brp_mean[c(1,3,4,2),]
+sbbi_brp_mean
+```
+
+
+**SBBI - Long-Term Government Bond (20Yr)**
+```{r, message = FALSE}
+sbbi_lt_bond <- read_excel("/Users/zexing/Desktop/296B Final/Historical Data/SBBI Data for Capital Markets (2022_12_31).xlsx", sheet = "lt_bond") %>%
+  rename("obs_date" = 1, "sbbi_lt_bond" = 2,
+         "ust_1m" = 3, "sbbi_lt_bond_risk_premium" = 4, "cpi" = 5) %>%
+  mutate(obs_date = as.Date(obs_date,origin = "1899-12-30"))
+```
+
+*Summary of the overall distribution*
+```{r}
+summary(sbbi_lt_bond$sbbi_lt_bond_risk_premium)
+sbbi_lt_bond %>%
+  ggplot(aes(x=sbbi_lt_bond_risk_premium))+
+  geom_histogram(aes(y=..density..),color = "grey")+
+  labs(x = "Distribution of Mean of Historical LT Bond Risk Premium (Annual)")
+```
+
+*Bucket based on inflation*
+```{r,results="hide"}
+sbbi_lt_bond <- sbbi_lt_bond[order(sbbi_lt_bond$cpi),]
+sum(sbbi_lt_bond$cpi <=0)
+sum((sbbi_lt_bond$cpi >0) & (sbbi_lt_bond$cpi<=0.025))
+sum((sbbi_lt_bond$cpi >0.025) & (sbbi_lt_bond$cpi<=0.05))
+sum(sbbi_lt_bond$cpi >=0.05)
+sbbi_lt_bond <- sbbi_lt_bond %>%
+  mutate(bucket = c(rep("Deflation",10),
+                    rep("Low",35),
+                    rep("Medium",33),
+                    rep("High",18)))
+#sbbi_lt_bond <- sbbi_lt_bond[order(sbbi_lt_bond$obs_date),]
+```
+
+*Mean of Equity Return within Inflation Bucket*
+```{r}
+sbbi_brp_mean <- sbbi_lt_bond %>%
+	group_by(bucket) %>%
+	summarise(sbbi_brp_mean = mean(sbbi_lt_bond_risk_premium))
+sbbi_brp_mean <- sbbi_brp_mean[c(1,3,4,2),]
+sbbi_brp_mean
+```
+
+**NAIC - 100 Years of Data(Given)**
+
+**Intermediate Bond Return (5Yr)**
+```{r}
+naic_int_govt <- read.csv("/Users/zexing/Desktop/296B Final/NAIC/naic_int_govt_tr.csv")
+naic_int_govt <- naic_int_govt[,-1]
+
+naic_ust_1m <-read.csv("/Users/zexing/Desktop/296B Final/NAIC/naic_ust_1m.csv")
+naic_ust_1m <- naic_ust_1m[,-1]
+```
+
+*Convert to Annual Data*
+```{r}
+naic_int_govt_annual <- data.frame(matrix(1000, ncol=1, nrow = 1000))
+for (i in 1:1200){
+  naic_int_govt_annual[,i+1] <- naic_int_govt_annual[,i]*(1+naic_int_govt[,i])
+}
+holder <- data.frame(matrix(0, ncol=100, nrow = 1000))
+for (i in 1:100){
+  holder[,i] <- naic_int_govt_annual[,1+12*i]/naic_int_govt_annual[,(1+12*(i-1))]-1
+}
+naic_int_govt_annual <- holder
+```
+
+
+```{r}
+summary(sbbi_it_bond$sbbi_it_bond)
+summary(unlist(naic_int_govt_annual))
+```
+
+```{r}
+naic_ust_1m_annual <- data.frame(matrix(1000, ncol=1, nrow = 1000))
+for (i in 1:1200){
+  naic_ust_1m_annual[,i+1] <- naic_ust_1m_annual[,i]*(1+naic_ust_1m[,i]/12)
+}
+holder <- data.frame(matrix(0, ncol=100, nrow = 1000))
+for (i in 1:100){
+  holder[,i] <- naic_ust_1m_annual[,1+12*i]/naic_ust_1m_annual[,(1+12*(i-1))]-1
+}
+naic_ust_1m_annual <- holder
+```
+
+
+```{r}
+summary(unlist(sbbi_it_bond$ust_1m))
+summary(unlist(naic_ust_1m_annual))
+```
+
+
+*Then calculate the Bond Risk Premium.*
+```{r}
+naic_it_brp_annual <- data.frame(matrix(0, ncol=100, nrow = 1000))
+for (col in 1:100){
+  for (row in 1:1000){
+    naic_it_brp_annual[row,col] = (1+naic_int_govt_annual[row,col])/(1+naic_ust_1m_annual[row,col]) - 1
+  }
+}
+summary(unlist(naic_it_brp_annual))
+```
+
+```{r}
+x <- unlist(naic_it_brp_annual)
+x<- sbbi_it_bond$sbbi_it_bond_risk_premium
+quantile(x,0.01)
+quantile(x,0.05)
+quantile(x,0.1)
+quantile(x,0.9)
+quantile(x,0.95)
+quantile(x,0.99)
+```
+
+```{r}
+mean_container <- numeric(1000)
+for (i in 1:1000){
+  mean_container[i] = mean(t(as.tibble(naic_it_brp_annual[i,])))
+}
+mean_container <- as.tibble(mean_container)
+mean_container %>%
+  ggplot(aes(x=value)) +
+  geom_histogram(aes(y=..density..),color = "grey") +
+    labs(x = "Distribution of Mean of NAIC Simulated Bond Risk Premium (IT Govt) (Annual)")
+```
+
+```{r}
+sbbi_it_bond %>%
+  ggplot(aes(x=sbbi_it_bond_risk_premium)) +
+  geom_histogram(aes(y=..density..),color = "grey") +
+  labs(x = "SBBI - Bond Risk Premium Int. Govt Bond (5Yr)")
+
+
+naic_it_brp_annual_v <- as.tibble(unlist(naic_it_brp_annual))
+naic_it_brp_annual_v%>%
+  ggplot(aes(x=value)) +
+  geom_histogram(aes(y=..density..),color = "grey") +
+  labs(x = "NAIC - Bond Risk Premium Int. Govt Bond (5Yr)")
+```
+
+
+
+**LongTerm Bond Return (20Yr)**
+```{r}
+naic_lt_govt <- read.csv("/Users/zexing/Desktop/296B Final/NAIC/naic_lt_govt_tr.csv")
+naic_lt_govt <- naic_lt_govt[,-1]
+
+naic_ust_1m <-read.csv("/Users/zexing/Desktop/296B Final/NAIC/naic_ust_1m.csv")
+naic_ust_1m <- naic_ust_1m[,-1]
+```
+
+*Convert to Annual Data*
+```{r}
+naic_lt_govt_annual <- data.frame(matrix(1000, ncol=1, nrow = 1000))
+for (i in 1:1200){
+  naic_lt_govt_annual[,i+1] <- naic_lt_govt_annual[,i]*(1+naic_lt_govt[,i])
+}
+holder <- data.frame(matrix(0, ncol=100, nrow = 1000))
+for (i in 1:100){
+  holder[,i] <- naic_lt_govt_annual[,1+12*i]/naic_lt_govt_annual[,(1+12*(i-1))]-1
+}
+naic_lt_govt_annual <- holder
+```
+
+```{r}
+summary(sbbi_lt_bond$sbbi_lt_bond)
+summary(unlist(naic_lt_govt_annual))
+```
+
+
+```{r}
+naic_ust_1m_annual <- data.frame(matrix(1000, ncol=1, nrow = 1000))
+for (i in 1:1200){
+  naic_ust_1m_annual[,i+1] <- naic_ust_1m_annual[,i]*(1+naic_ust_1m[,i]/12)
+}
+holder <- data.frame(matrix(0, ncol=100, nrow = 1000))
+for (i in 1:100){
+  holder[,i] <- naic_ust_1m_annual[,1+12*i]/naic_ust_1m_annual[,(1+12*(i-1))]-1
+}
+naic_ust_1m_annual <- holder
+```
+
+```{r}
+summary(sbbi_lt_bond$ust_1m)
+summary(unlist(naic_ust_1m_annual))
+```
+
+
+*Then calculate the Bond Risk Premium*
+```{r}
+naic_lt_brp_annual <- data.frame(matrix(0, ncol=100, nrow = 1000))
+for (col in 1:100){
+  for (row in 1:1000){
+    naic_lt_brp_annual[row,col] = (1+naic_lt_govt_annual[row,col])/(1+naic_ust_1m_annual[row,col]) - 1
+  }
+}
+summary(unlist(naic_lt_brp_annual))
+```
+
+
+```{r}
+x<- sbbi_lt_bond$sbbi_lt_bond_risk_premium
+quantile(x,0.01)
+quantile(x,0.05)
+quantile(x,0.1)
+quantile(x,0.9)
+quantile(x,0.95)
+quantile(x,0.99)
+```
+
+
+
+
+```{r}
+mean_container <- numeric(1000)
+for (i in 1:1000){
+  mean_container[i] = mean(t(as.tibble(naic_lt_brp_annual[i,])))
+}
+mean_container <- as.tibble(mean_container)
+mean_container %>%
+  ggplot(aes(x=value)) +
+  geom_histogram(aes(y=..density..),color = "grey") +
+    labs(x = "Distribution of Mean of NAIC Simulated Bond Risk Premium (LT 20 Yr)(Annual)")
+```
+
+
+**AIRG - 69 Years of Data 1954.1 - 2022.12**
+
+**AIRG IT Govt Bond TR (Annual)**
+```{r}
+airg_it_govt <- read.csv("/Users/zexing/Desktop/296B Final/AIRG/airg_it_govt_annual.csv",header = FALSE)
+holder <- data.frame(matrix(0, ncol=70, nrow = 1000))
+for (col in 1:70){
+  holder[,col] = airg_it_govt[,col+1]/airg_it_govt[,col]-1
+}
+airg_it_govt <- holder[,-70]
+```
+
+**UST - 3M (Annual)**
+```{r, message = FALSE}
+airg_ust_3m <- read.csv("/Users/zexing/Desktop/296B Final/AIRG/airg_ust_3m_annual.csv",
+                          header = FALSE) 
+airg_ust_3m <-  airg_ust_3m[,-c(1,71)]
+```
+
+*Then calculate the Bond Risk Premium. The formula is (1+airg_it_govt)/(1+airg_ust_3m)- 1*
+```{r}
+airg_it_brp_annual <- data.frame(matrix(0, ncol=69, nrow = 1000))
+for (col in 1:69){
+  for (row in 1:1000){
+    airg_it_brp_annual[row,col] = (1+airg_it_govt[row,col])/(1+airg_ust_3m[row,col]) - 1
+  }
+}
+summary(unlist(airg_it_brp_annual))
+```
+
+```{r}
+x<- unlist(airg_it_brp_annual)
+quantile(x,0.01)
+quantile(x,0.05)
+quantile(x,0.1)
+quantile(x,0.9)
+quantile(x,0.95)
+quantile(x,0.99)
+```
+
+
+
+```{r}
+mean_container <- numeric(1000)
+for (i in 1:1000){
+  mean_container[i] = mean(t(as.tibble(airg_it_brp_annual[i,])))
+}
+mean_container <- as.tibble(mean_container)
+mean_container %>%
+  ggplot(aes(x=value)) +
+  geom_histogram(aes(y=..density..),color = "grey") +
+    labs(x = "Distribution of Mean of AIRG Simulated Bond Risk Premium (Annual)")
+```
+
+
+
+```{r}
+sbbi_lt_bond %>%
+  ggplot(aes(x=sbbi_lt_bond_risk_premium)) +
+  geom_histogram(aes(y=..density..),color = "grey") +
+  labs(x = "SBBI - Bond Risk Premium LT. Govt Bond (20Yr)")
+
+naic_lt_brp_annual_v <- as.tibble(unlist(naic_lt_brp_annual))
+naic_lt_brp_annual_v%>%
+  ggplot(aes(x=value)) +
+  geom_histogram(aes(y=..density..),color = "grey") +
+  labs(x = "NAIC - Bond Risk Premium LT. Govt Bond (20Yr)")
+
+airg_it_brp_annual_v <- as.tibble(unlist(airg_it_brp_annual))
+airg_it_brp_annual_v%>%
+  ggplot(aes(x=value)) +
+  geom_histogram(aes(y=..density..),color = "grey") +
+  labs(x = "AIRG - Bond Risk Premium IT. Govt Bond (20Yr)")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

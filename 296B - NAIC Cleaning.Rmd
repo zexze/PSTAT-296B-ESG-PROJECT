@@ -1,0 +1,209 @@
+---
+title: "296B - NAIC Cleaning"
+output: html_document
+date: "2023-02-28"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r, message = FALSE}
+#rm(list = ls())
+library(lubridate)
+library(ggplot2)
+library(kableExtra)
+library(tidyverse)
+library(dplyr)
+library(gridBase)
+library(gridExtra)
+```
+
+#### PART 0: NAIC Cleaning
+
+**Load the original data and take out unnecessary info**
+```{r,eval = FALSE}
+naic <- read.csv("/Users/zexing/Desktop/model comparison/NAIC/1000_Path_Subset_1a_Conning_GFF_Baseline_Equity_123121.csv", header = TRUE)
+naic <- naic[,-c(3:35)] #get rid of spot rates
+naic <- naic[,-c(5:24)] #Only keep 1mo,3mo,20year
+naic <- naic[,-c(6:15)]
+naic <- naic[,-c(24:39)]
+naic <- naic[,-c(17:21)]
+naic <- naic[,-c(8:11)]
+naic <- naic[,-c(12)]
+write.csv(naic, file = "naic_cleaning.csv")
+```
+
+**Further clean the data to make it more concise**
+```{r,eval = FALSE}
+naic_c <- read.csv("/Users/zexing/Desktop/296B Final/RAW DATA/naic_cleaning.csv",header = TRUE)
+naic_c <- naic_c %>%
+  mutate(int_govt_tr = Int.Govt.Bonds.Price + Int.Govt.Bonds.Income) %>%
+  mutate(short_govt_tr = Short.Govt.Bonds.Price + Short.Govt.Bonds.Income) %>%
+  mutate(lt_govt_tr = Long.Govt.Bonds.Price + Long.Govt.Bonds.Income) %>%
+  mutate(large_cap_tr = Large.Cap.Price + Large.Cap.Income)
+naic_c <- naic_c[,-c(7:14)]
+naic_c <- naic_c %>%
+  rename("ust_1m_yield" = 4,
+         "ust_3m_yield" = 5,
+         "ust_20yr_yield" = 6)
+write.csv(naic_c, file = "naic_final.csv")
+```
+
+**Load our final data**
+```{r}
+naic <- read.csv("/Users/zexing/Desktop/model comparison/NAIC/naic_final.csv",header = TRUE)
+naic <- naic[,-c(1:2)]
+```
+
+ **Create a list that store all the values correspondent to I_th time**
+```{r}
+time <- c(1:1200)
+path <- c(1:1000)
+
+# Each object contains 1000 values
+mylist <- list()
+for (i in time) {
+  mylist[[i]] <- which(naic$TIME == i)
+}
+```
+
+**Get UST-1m NAIC Simulated Data**
+```{r}
+df <- data.frame(matrix(ncol = 1200, nrow = 1000))
+for (col in time) {
+  for (row in path) {
+    df[row,col] <- naic$ust_1m_yield[mylist[[col]][[row]]]
+  }
+}
+write.csv(df, file = "naic_ust_1m.csv")
+```
+
+```{r}
+# Check we do this correctly
+which(naic$TIME == 4)
+naic$ust_1m_yield[10814] #10th simulation, time 4
+df[10,4] #10th simulation, time 4
+# Number match! Did this correctly!
+```
+
+**Get UST-3m NAIC Simulated Data**
+```{r}
+df1 <- data.frame(matrix(ncol = 1200, nrow = 1000))
+for (col in time) {
+  for (row in path) {
+    df1[row,col] <- naic$ust_3m_yield[mylist[[col]][[row]]]
+  }
+}
+write.csv(df1, file = "naic_ust_3m.csv")
+```
+
+```{r}
+# Check we do this correctly
+which(naic$TIME == 4)
+naic$ust_3m_yield[10814] #10th simulation, time 4
+df1[10,4] #10th simulation, time 4
+# Number match! Did this correctly!
+```
+
+**Get UST-20Yr NAIC Simulated Data**
+```{r}
+df2 <- data.frame(matrix(ncol = 1200, nrow = 1000))
+for (col in time) {
+  for (row in path) {
+    df2[row,col] <- naic$ust_20yr_yield[mylist[[col]][[row]]]
+  }
+}
+write.csv(df2, file = "naic_ust_20yr.csv")
+```
+
+```{r}
+# Check we do this correctly
+which(naic$TIME == 4)
+naic$ust_20yr_yield[10814] #10th simulation, time 4
+df2[10,4] #10th simulation, time 4
+# Number match! Did this correctly!
+```
+
+**Get Intermediate Govt Bond TR NAIC Simulated Data**
+```{r}
+df3 <- data.frame(matrix(ncol = 1200, nrow = 1000))
+for (col in time) {
+  for (row in path) {
+    df3[row,col] <- naic$int_govt_tr[mylist[[col]][[row]]]
+  }
+}
+write.csv(df3, file = "naic_int_govt_tr.csv")
+```
+
+```{r}
+# Check we do this correctly
+which(naic$TIME == 4)
+naic$int_govt_tr[10814] #10th simulation, time 4
+df3[10,4] #10th simulation, time 4
+# Number match! Did this correctly!
+```
+
+**Get Short Term Govt Bond TR NAIC Simulated Data**
+```{r}
+df4 <- data.frame(matrix(ncol = 1200, nrow = 1000))
+for (col in time) {
+  for (row in path) {
+    df4[row,col] <- naic$short_govt_tr[mylist[[col]][[row]]]
+  }
+}
+write.csv(df4, file = "naic_short_govt_tr.csv")
+```
+
+```{r}
+# Check we do this correctly
+which(naic$TIME == 4)
+naic$short_govt_tr[10814] #10th simulation, time 4
+df4[10,4] #10th simulation, time 4
+# Number match! Did this correctly!
+```
+
+**Get Long Term Govt Bond TR NAIC Simulated Data**
+```{r}
+df5 <- data.frame(matrix(ncol = 1200, nrow = 1000))
+for (col in time) {
+  for (row in path) {
+    df5[row,col] <- naic$lt_govt_tr[mylist[[col]][[row]]]
+  }
+}
+write.csv(df5, file = "naic_lt_govt_tr.csv")
+```
+
+```{r}
+# Check we do this correctly
+which(naic$TIME == 4)
+naic$lt_govt_tr[10814] #10th simulation, time 4
+df5[10,4] #10th simulation, time 4
+# Number match! Did this correctly!
+```
+
+**Get Large Cap TR NAIC Simulated Data**
+```{r}
+df6 <- data.frame(matrix(ncol = 1200, nrow = 1000))
+for (col in time) {
+  for (row in path) {
+    df6[row,col] <- naic$large_cap_tr[mylist[[col]][[row]]]
+  }
+}
+write.csv(df6, file = "naic_large_cap_tr.csv")
+```
+
+```{r}
+# Check we do this correctly
+which(naic$TIME == 4)
+naic$large_cap_tr[10814] #10th simulation, time 4
+df6[10,4] #10th simulation, time 4
+# Number match! Did this correctly!
+```
+
+
+
+
+
+
